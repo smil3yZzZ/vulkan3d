@@ -1,0 +1,12 @@
+﻿  main.cpp
+main.obj : error LNK2019: símbolo externo _vkEnumerateInstanceExtensionProperties@12 sin resolver al que se hace referencia en la función _main
+main.obj : error LNK2019: símbolo externo _glfwInit sin resolver al que se hace referencia en la función _main
+main.obj : error LNK2019: símbolo externo _glfwTerminate sin resolver al que se hace referencia en la función _main
+main.obj : error LNK2019: símbolo externo _glfwWindowHint sin resolver al que se hace referencia en la función _main
+main.obj : error LNK2019: símbolo externo _glfwCreateWindow sin resolver al que se hace referencia en la función _main
+main.obj : error LNK2019: símbolo externo _glfwDestroyWindow sin resolver al que se hace referencia en la función _main
+main.obj : error LNK2019: símbolo externo _glfwWindowShouldClose sin resolver al que se hace referencia en la función _main
+main.obj : error LNK2019: símbolo externo _glfwPollEvents sin resolver al que se hace referencia en la función _main
+C:\VulkanSDK\1.2.189.2\Lib\vulkan-1.lib : warning LNK4272: el tipo de máquina de biblioteca 'x64' está en conflicto con el tipo de máquina de destino 'x86'
+C:\Users\holivera\Documents\Visual Studio 2019\Libraries\glfw-3.3.5.bin.WIN64\lib-vc2019\glfw3.lib : warning LNK4272: el tipo de máquina de biblioteca 'x64' está en conflicto con el tipo de máquina de destino 'x86'
+C:\Users\holivera\source\repos\VulkanTest\Debug\VulkanTest.exe : fatal error LNK1120: 8 externos sin resolver
