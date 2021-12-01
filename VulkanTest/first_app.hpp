@@ -4,6 +4,7 @@
 #include "lve_pipeline.hpp"
 #include "lve_device.hpp"
 #include "lve_swap_chain.hpp"
+#include "lve_model.hpp"
 
 #include <memory>
 #include <vector>
@@ -13,6 +14,7 @@ namespace lve {
 	public: 
 		static constexpr int WIDTH = 800;
 		static constexpr int HEIGHT = 600;
+		static constexpr int NUMBER_OF_TRIANGLE_VERTICES = 3;
 
 		FirstApp();
 		~FirstApp();
@@ -22,6 +24,8 @@ namespace lve {
 
 		void run();
 	private:
+		void loadModels();
+		void updateModels(int powIteration);
 		void createPipelineLayout();
 		void createPipeline();
 		void createCommandBuffers();
@@ -33,5 +37,8 @@ namespace lve {
 		std::unique_ptr<LvePipeline> lvePipeline;
 		VkPipelineLayout pipelineLayout;
 		std::vector<VkCommandBuffer> commandBuffers;
+		std::unique_ptr<LveModel> lveModel;
+		std::vector<LveModel::Vertex> vertices{};
+
 	};
 }

@@ -1,0 +1,11 @@
+﻿  first_app.cpp
+  lve_pipeline.cpp
+  lve_window.cpp
+  main.cpp
+  lve_device.cpp
+  lve_swap_chain.cpp
+  Generando código
+  Previous IPDB not found, fall back to full compilation.
+  All 1448 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Generación de código finalizada
+  VulkanTest.vcxproj -> C:\Users\holivera\source\repos\VulkanTest\x64\Release\VulkanTest.exe

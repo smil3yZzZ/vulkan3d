@@ -1,11 +1,14 @@
 #include "first_app.hpp"
+#include <math.h>
 
 #include <stdexcept>
 #include <array>
+#include <iostream>
 
 namespace lve {
 
 	FirstApp::FirstApp() {
+		loadModels();
 		createPipelineLayout();
 		createPipeline();
 		createCommandBuffers();
@@ -16,11 +19,51 @@ namespace lve {
 	}
 
 	void FirstApp::run() {
+		int frame = 0;
+		int powIteration = 1;
 		while (!lveWindow.shouldClose()) {
+			if (frame > 60 && frame % 60 == 0) {
+				std::cout << "Frame: " << frame << std::endl;
+				updateModels(powIteration++);
+			}
+			//createCommandBuffer();
 			glfwPollEvents();
 			drawFrame();
+			frame++;
 		}
 		vkDeviceWaitIdle(lveDevice.device());
+	}
+
+	void FirstApp::loadModels() {
+		vertices = {
+			{{0.0f, -0.5f}},
+			{{0.5f, 0.5f}},
+			{{-0.5f, 0.5f}}
+		};
+		lveModel = std::make_unique<LveModel>(lveDevice, vertices);
+	}
+
+	void FirstApp::updateModels(int powIteration) {
+		int numOfVertices = NUMBER_OF_TRIANGLE_VERTICES;
+		//std::cout << "Update mode:" << std::endl;
+		int previousNumOfTriangles = pow(numOfVertices, (double)powIteration - 1);
+		int numOfTrianglesPerPreviousTriangles = pow(numOfVertices, (double)powIteration)/previousNumOfTriangles;
+		std::vector<LveModel::Vertex> auxVertices(numOfVertices * previousNumOfTriangles * numOfTrianglesPerPreviousTriangles);
+		//std::cout << "Update mode after pow:" << std::endl;
+		for (int i = 0; i < previousNumOfTriangles; i++) {
+			for (int j = 0; j < numOfTrianglesPerPreviousTriangles; j++) {
+				for (int k = 0; k < numOfVertices; k++) {
+					//std::cout << "Current triangle (previous): " << i << " - Current triangle per previous triangle: " << j << " - Current vertex: " << k << std::endl;
+					//std::cout << "Vertices size: " << vertices.size() << std::endl;
+					auxVertices[i * numOfTrianglesPerPreviousTriangles * numOfVertices + j * numOfVertices + k].position = (vertices[i * numOfVertices + j].position + vertices[i * numOfVertices + k].position) / 2.0f;
+					//std::cout << auxVertices[i * numOfTrianglesPerPreviousTriangles * numOfVertices + j * numOfVertices + k].position[0] << "," << auxVertices[i * numOfTrianglesPerPreviousTriangles * numOfVertices + j * numOfVertices + k].position[1] << std::endl;
+					//auxVertices[i * numOfVertices + j] = (vertices[(i / numOfTriangles) * numOfVertices + i].position + vertices[(i / numOfTriangles) * numOfVertices + j].position)/(powIteration + 1);
+				}
+			}
+		}
+		vertices = auxVertices;
+		
+		//lveModel->updateVertexBuffersData(vertices);
 	}
 
 	void FirstApp::createPipelineLayout() {
@@ -86,7 +129,8 @@ namespace lve {
 			vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 			lvePipeline->bind(commandBuffers[i]);
-			vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+			lveModel->bind(commandBuffers[i]);
+			lveModel->draw(commandBuffers[i]);
 
 			vkCmdEndRenderPass(commandBuffers[i]);
 			if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS) {
