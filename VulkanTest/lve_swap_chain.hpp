@@ -38,6 +38,8 @@ class LveSwapChain {
   VkResult acquireNextImage(uint32_t *imageIndex);
   VkResult submitCommandBuffers(const VkCommandBuffer *buffers, uint32_t *imageIndex);
 
+  size_t getCurrentFrame();
+
  private:
   void createSwapChain();
   void createImageViews();

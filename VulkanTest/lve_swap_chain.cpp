@@ -52,6 +52,10 @@ LveSwapChain::~LveSwapChain() {
   }
 }
 
+size_t LveSwapChain::getCurrentFrame() {
+    return currentFrame;
+}
+
 VkResult LveSwapChain::acquireNextImage(uint32_t *imageIndex) {
   vkWaitForFences(
       device.device(),

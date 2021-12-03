@@ -3,7 +3,9 @@
 
 #include <stdexcept>
 #include <array>
+
 #include <iostream>
+
 
 namespace lve {
 
@@ -11,7 +13,7 @@ namespace lve {
 		loadModels();
 		createPipelineLayout();
 		createPipeline();
-		createCommandBuffers();
+		initCommandBuffers();
 	}
 
 	FirstApp::~FirstApp() {
@@ -22,11 +24,9 @@ namespace lve {
 		int frame = 0;
 		int powIteration = 1;
 		while (!lveWindow.shouldClose()) {
-			if (frame > 60 && frame % 60 == 0) {
-				std::cout << "Frame: " << frame << std::endl;
+			if (frame > 0 && frame % 60 == 0 && frame < 60 * SIERPINSKI_DEPTH) {
 				updateModels(powIteration++);
 			}
-			//createCommandBuffer();
 			glfwPollEvents();
 			drawFrame();
 			frame++;
@@ -40,30 +40,22 @@ namespace lve {
 			{{0.5f, 0.5f}},
 			{{-0.5f, 0.5f}}
 		};
-		lveModel = std::make_unique<LveModel>(lveDevice, vertices);
+		lveModel = std::make_unique<LveModel>(lveSwapChain.getCurrentFrame(), lveDevice, vertices, lveAllocator);
 	}
 
 	void FirstApp::updateModels(int powIteration) {
 		int numOfVertices = NUMBER_OF_TRIANGLE_VERTICES;
-		//std::cout << "Update mode:" << std::endl;
 		int previousNumOfTriangles = pow(numOfVertices, (double)powIteration - 1);
 		int numOfTrianglesPerPreviousTriangles = pow(numOfVertices, (double)powIteration)/previousNumOfTriangles;
 		std::vector<LveModel::Vertex> auxVertices(numOfVertices * previousNumOfTriangles * numOfTrianglesPerPreviousTriangles);
-		//std::cout << "Update mode after pow:" << std::endl;
 		for (int i = 0; i < previousNumOfTriangles; i++) {
 			for (int j = 0; j < numOfTrianglesPerPreviousTriangles; j++) {
 				for (int k = 0; k < numOfVertices; k++) {
-					//std::cout << "Current triangle (previous): " << i << " - Current triangle per previous triangle: " << j << " - Current vertex: " << k << std::endl;
-					//std::cout << "Vertices size: " << vertices.size() << std::endl;
 					auxVertices[i * numOfTrianglesPerPreviousTriangles * numOfVertices + j * numOfVertices + k].position = (vertices[i * numOfVertices + j].position + vertices[i * numOfVertices + k].position) / 2.0f;
-					//std::cout << auxVertices[i * numOfTrianglesPerPreviousTriangles * numOfVertices + j * numOfVertices + k].position[0] << "," << auxVertices[i * numOfTrianglesPerPreviousTriangles * numOfVertices + j * numOfVertices + k].position[1] << std::endl;
-					//auxVertices[i * numOfVertices + j] = (vertices[(i / numOfTriangles) * numOfVertices + i].position + vertices[(i / numOfTriangles) * numOfVertices + j].position)/(powIteration + 1);
 				}
 			}
 		}
 		vertices = auxVertices;
-		
-		//lveModel->updateVertexBuffersData(vertices);
 	}
 
 	void FirstApp::createPipelineLayout() {
@@ -91,7 +83,7 @@ namespace lve {
 			);
 	}
 
-	void FirstApp::createCommandBuffers() {
+	void FirstApp::initCommandBuffers() {
 		commandBuffers.resize(lveSwapChain.imageCount());
 
 		VkCommandBufferAllocateInfo allocInfo{};
@@ -103,41 +95,45 @@ namespace lve {
 		if (vkAllocateCommandBuffers(lveDevice.device(), &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
 			throw new std::runtime_error("failed to allocate command buffers");
 		}
-
-		for (int i = 0; i < commandBuffers.size(); i++) {
-			VkCommandBufferBeginInfo beginInfo{};
-			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-			if (vkBeginCommandBuffer(commandBuffers[i], &beginInfo) != VK_SUCCESS) {
-				throw std::runtime_error("failed to begin recording command buffer");
-			}
-
-			VkRenderPassBeginInfo renderPassInfo{};
-			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass = lveSwapChain.getRenderPass();
-			renderPassInfo.framebuffer = lveSwapChain.getFrameBuffer(i);
-
-			renderPassInfo.renderArea.offset = {0, 0};
-			renderPassInfo.renderArea.extent = lveSwapChain.getSwapChainExtent();
-
-			std::array<VkClearValue, 2> clearValues{};
-			clearValues[0].color = { 0.1f, 0.1f, 0.1f, 1.0f };
-			clearValues[1].depthStencil = {1.0f, 0};
-			renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-			renderPassInfo.pClearValues = clearValues.data();
-
-			vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-			lvePipeline->bind(commandBuffers[i]);
-			lveModel->bind(commandBuffers[i]);
-			lveModel->draw(commandBuffers[i]);
-
-			vkCmdEndRenderPass(commandBuffers[i]);
-			if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS) {
-				throw std::runtime_error("failed to record command buffer!");
-			}
-		}
 	}
+
+	void FirstApp::createCommandBuffer(size_t vertexBufferIndex) {
+		VkCommandBufferBeginInfo beginInfo{};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+		if (vkBeginCommandBuffer(commandBuffers[currentIndex], &beginInfo) != VK_SUCCESS) {
+			throw std::runtime_error("failed to begin recording command buffer");
+		}
+
+		VkRenderPassBeginInfo renderPassInfo{};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = lveSwapChain.getRenderPass();
+		renderPassInfo.framebuffer = lveSwapChain.getFrameBuffer(currentIndex);
+
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent = lveSwapChain.getSwapChainExtent();
+
+		std::array<VkClearValue, 2> clearValues{};
+		clearValues[0].color = { 0.1f, 0.1f, 0.1f, 1.0f };
+		clearValues[1].depthStencil = { 1.0f, 0 };
+		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+		renderPassInfo.pClearValues = clearValues.data();
+
+		vkCmdBeginRenderPass(commandBuffers[currentIndex], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+		lvePipeline->bind(commandBuffers[currentIndex]);
+		lveModel->bind(vertexBufferIndex, commandBuffers[currentIndex]);
+		lveModel->draw(commandBuffers[currentIndex]);
+
+		vkCmdEndRenderPass(commandBuffers[currentIndex]);
+		if (vkEndCommandBuffer(commandBuffers[currentIndex]) != VK_SUCCESS) {
+			throw std::runtime_error("failed to record command buffer!");
+		}
+
+		currentIndex = (currentIndex + 1) % commandBuffers.size();
+	}
+
+	
 	void FirstApp::drawFrame() {
 		uint32_t imageIndex;
 		auto result = lveSwapChain.acquireNextImage(&imageIndex);
@@ -145,6 +141,9 @@ namespace lve {
 		if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
 			throw std::runtime_error("failed to acquire swap chain image!");
 		}
+
+		lveModel->updateVertexBufferData(lveSwapChain.getCurrentFrame(), vertices);
+		createCommandBuffer(lveSwapChain.getCurrentFrame());
 
 		result = lveSwapChain.submitCommandBuffers(&commandBuffers[imageIndex], &imageIndex);
 		if (result != VK_SUCCESS) {
