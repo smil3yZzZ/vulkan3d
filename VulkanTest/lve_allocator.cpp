@@ -27,14 +27,6 @@ namespace lve {
 		vmaCreateAllocator(&allocatorInfo, &allocator);
 	}
 
-	/*
-	size: bufferSize,
-			usage: VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-			properties: VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			vertexBuffer?: vertexBuffers[vertexBufferIndex],
-			vertexBufferMemory?: vertexBufferMemoryObjects[vertexBufferIndex]
-	*/
-
 	void LveAllocator::createBuffer(VkDeviceSize size,
 		VkBufferUsageFlags usage,
 		VkMemoryPropertyFlags properties,
@@ -52,28 +44,13 @@ namespace lve {
 		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 		allocInfo.requiredFlags = properties;
 
-		//allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 		vmaCreateBuffer(this->allocator, &bufferInfo, &allocInfo, &buffer, &constantBufferAllocation, nullptr);
-		std::cout << "Buffer created!" << std::endl;
 
 		*allocator = this->allocator;
 	}
 
 	void LveAllocator::destroyBuffer(VkBuffer& buffer, VmaAllocation& constantBufferAllocation) {
 		vmaDestroyBuffer(allocator, buffer, constantBufferAllocation);
-	}
-
-	uint32_t LveAllocator::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
-		VkPhysicalDeviceMemoryProperties memProperties;
-		vkGetPhysicalDeviceMemoryProperties(device.getPhysicalDevice(), &memProperties);
-		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-			if ((typeFilter & (1 << i)) &&
-				(memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-				return i;
-			}
-		}
-
-		throw std::runtime_error("failed to find suitable memory type!");
 	}
 
 }

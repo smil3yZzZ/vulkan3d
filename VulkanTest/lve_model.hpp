@@ -36,7 +36,6 @@ namespace lve {
 		private:
 			void initVertexBuffers();
 			void createVertexBuffer(size_t vertexBufferIndex, const std::vector<Vertex>& vertices);
-			void createVertexBuffers(const std::vector<Vertex>& vertices);
 			void destroyVertexBuffers();
 
 			LveDevice& lveDevice;

@@ -28,14 +28,6 @@ namespace lve {
 		VkDeviceSize bufferSize = sizeof(vertices[0]) * vertexCount;
 
 		VmaAllocator allocator;
-		/*
-		lveDevice.createBuffer(bufferSize,
-			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			vertexBuffers[vertexBufferIndex],
-			vertexBufferMemoryObjects[vertexBufferIndex]);
-		*/
-		std::cout << &allocator << std::endl;
 
 		lveAllocator.createBuffer(bufferSize,
 			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
@@ -46,28 +38,19 @@ namespace lve {
 			);
 
 		void* data;
-		//vkMapMemory(lveDevice.device(), vertexBufferMemoryObjects[vertexBufferIndex], 0, bufferSize, 0, &data);
-		std::cout << &allocator << std::endl;
 
 		vmaMapMemory(allocator, vertexBufferAllocations[vertexBufferIndex], &data);
 		memcpy(data, vertices.data(), static_cast<size_t>(bufferSize));
-
-		std::cout << "Unmggapping memory...." << std::endl;
 		vmaUnmapMemory(allocator, vertexBufferAllocations[vertexBufferIndex]);
-		//vkUnmapMemory(lveDevice.device(), vertexBufferMemoryObjects[vertexBufferIndex]);
 	}
 
 	void LveModel::destroyVertexBuffers() {
 		for (int i = 0; i < vertexBuffers.size(); i++) {
 			lveAllocator.destroyBuffer(vertexBuffers[i], vertexBufferAllocations[i]);
-			//vkDestroyBuffer(lveDevice.device(), vertexBuffers[i], nullptr);
-			//vkFreeMemory(lveDevice.device(), vertexBufferMemoryObjects[i], nullptr);
 		}
 	}
 
 	void LveModel::updateVertexBufferData(size_t vertexBufferIndex, const std::vector<Vertex>& vertices) {
-		//vkDestroyBuffer(lveDevice.device(), vertexBuffers[vertexBufferIndex], nullptr);
-		//vkFreeMemory(lveDevice.device(), vertexBufferMemoryObjects[vertexBufferIndex], nullptr);
 		lveAllocator.destroyBuffer(vertexBuffers[vertexBufferIndex], vertexBufferAllocations[vertexBufferIndex]);
 		createVertexBuffer(vertexBufferIndex, vertices);
 	}
