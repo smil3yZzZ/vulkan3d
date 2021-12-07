@@ -11,7 +11,7 @@ namespace lve {
         ~LveAllocator();
 
         LveAllocator(const LveAllocator &) = delete;
-        void operator=(const LveAllocator &) = delete;
+        LveAllocator& operator=(const LveAllocator &) = delete;
 
         void createBuffer(VkDeviceSize size,
             VkBufferUsageFlags usage,

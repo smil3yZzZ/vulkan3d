@@ -13,7 +13,7 @@
 namespace lve {
 	class FirstApp {
 	public:
-		static constexpr int SIERPINSKI_DEPTH = 10;
+		static constexpr int SIERPINSKI_DEPTH = 3;
 
 		static constexpr int WIDTH = 800;
 		static constexpr int HEIGHT = 600;
@@ -31,20 +31,20 @@ namespace lve {
 		void updateModels(int powIteration);
 		void createPipelineLayout();
 		void createPipeline();
-		void initCommandBuffers();
-		void createCommandBuffer(size_t vertexBufferIndex);
+		void createCommandBuffers();
+		void freeCommandBuffers();
 		void drawFrame();
+		void recreateSwapChain();
+		void recordCommandBuffer(size_t vertexBufferIndex, int imageIndex);
 
 		LveWindow lveWindow{WIDTH, HEIGHT, "Hello Vulkan!"};
 		LveDevice lveDevice{ lveWindow };
 		LveAllocator lveAllocator{ lveDevice };
-		LveSwapChain lveSwapChain{ lveDevice, lveWindow.getExtent() };
+		std::unique_ptr<LveSwapChain> lveSwapChain;
 		std::unique_ptr<LvePipeline> lvePipeline;
 		VkPipelineLayout pipelineLayout;
 		std::vector<VkCommandBuffer> commandBuffers;
 		std::unique_ptr<LveModel> lveModel;
 		std::vector<LveModel::Vertex> vertices{};
-		size_t currentIndex = 0;
-
 	};
 }
