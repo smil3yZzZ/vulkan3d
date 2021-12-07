@@ -99,6 +99,7 @@ namespace lve {
 		} else {
 			lveSwapChain = std::make_unique<LveSwapChain>(lveDevice, extent, std::move(lveSwapChain));
 			if (lveSwapChain->imageCount() != commandBuffers.size()) {
+				std::cout << "Command buffers" << std::endl;
 				freeCommandBuffers();
 				createCommandBuffers();
 			}
@@ -176,7 +177,6 @@ namespace lve {
 		auto result = lveSwapChain->acquireNextImage(&imageIndex);
 
 		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-			std::cout << "Recreating swapchain..." << std::endl;
 			recreateSwapChain();
 			return;
 		}
@@ -190,7 +190,6 @@ namespace lve {
 
 		result = lveSwapChain->submitCommandBuffers(&commandBuffers[imageIndex], &imageIndex);
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || lveWindow.wasWindowResized()) {
-			std::cout << "Recreating swapchain and resetting window resized flag..." << std::endl;
 			lveWindow.resetWindowResizedFlag();
 			recreateSwapChain();
 			return;
