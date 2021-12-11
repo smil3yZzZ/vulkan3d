@@ -1,6 +1,4 @@
 ﻿  first_app.cpp
-C:\Users\holivera\source\repos\VulkanTest\VulkanTest\first_app.cpp(48,30): warning C4244: 'inicializando': conversión de 'double' a 'int'; posible pérdida de datos
-C:\Users\holivera\source\repos\VulkanTest\VulkanTest\first_app.cpp(49,42): warning C4244: 'inicializando': conversión de 'double' a 'int'; posible pérdida de datos
-  lve_swap_chain.cpp
-  Generando código...
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\first_app.cpp(58,30): warning C4244: 'inicializando': conversión de 'double' a 'int'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\first_app.cpp(59,42): warning C4244: 'inicializando': conversión de 'double' a 'int'; posible pérdida de datos
   VulkanTest.vcxproj -> C:\Users\holivera\source\repos\VulkanTest\x64\Debug\VulkanTest.exe
