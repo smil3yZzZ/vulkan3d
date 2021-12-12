@@ -163,6 +163,7 @@
   <ItemGroup>
     <ClInclude Include="first_app.hpp" />
     <ClInclude Include="lve_allocator.hpp" />
+    <ClInclude Include="lve_game_object.hpp" />
     <ClInclude Include="lve_model.hpp" />
     <ClInclude Include="lve_pipeline.hpp" />
     <ClInclude Include="lve_window.hpp" />

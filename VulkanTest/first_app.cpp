@@ -5,6 +5,7 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
+#include <glm/gtc/constants.hpp>
 
 #include <stdexcept>
 #include <array>
@@ -15,6 +16,7 @@
 namespace lve {
 
 	struct SimplePushConstantData {
+		glm::mat2 transform{ 1.f };
 		glm::vec2 offset;
 		alignas(16) glm::vec4 color;
 	};
@@ -22,7 +24,7 @@ namespace lve {
 	FirstApp::FirstApp() {
 		createPipelineLayout();
 		recreateSwapChain();
-		loadModels();
+		loadGameObjects();
 		createCommandBuffers();
 	}
 
@@ -31,26 +33,39 @@ namespace lve {
 	}
 
 	void FirstApp::run() {
-		int frame = 0;
-		int powIteration = 1;
+		//int frame = 0;
+		//int powIteration = 1;
 		while (!lveWindow.shouldClose()) {
+			/*
 			if (frame > 0 && frame % 60 == 0 && frame < 60 * SIERPINSKI_DEPTH) {
 				updateModels(powIteration++);
 			}
+			*/
 			glfwPollEvents();
 			drawFrame();
-			frame++;
+			//frame++;
 		}
 		vkDeviceWaitIdle(lveDevice.device());
 	}
 
-	void FirstApp::loadModels() {
+	void FirstApp::loadGameObjects() {
 		vertices = {
 			{{0.0f, -0.5f}, {1.0f, 1.0f, 0.0f, 0.5f}},
 			{{0.5f, 0.5f}, {1.0f, 1.0f, 0.0f, 0.5f}},
 			{{-0.5f, 0.5f}, {1.0f, 1.0f, 0.0f, 0.5f}}
 		};
-		lveModel = std::make_unique<LveModel>(lveSwapChain->getCurrentFrame(), lveDevice, vertices, lveAllocator);
+		//Set this to allow multiple vertex buffers!
+		auto lveModel = std::make_shared<LveModel>(lveSwapChain->getCurrentFrame(), lveDevice, vertices, lveAllocator);
+		//auto lveModel = std::make_shared<LveModel>(0, lveDevice, vertices, lveAllocator);
+
+		auto triangle = LveGameObject::createGameObject();
+		triangle.model = lveModel;
+		triangle.color = {.1f, .8f, .1f, 1.0f};
+		triangle.transform2d.translation.x = .2f;
+		triangle.transform2d.scale = { 2.f, .5f };
+		triangle.transform2d.rotation = .25f * glm::two_pi<float>();
+
+		gameObjects.push_back(std::move(triangle));
 	}
 
 	void FirstApp::updateModels(int powIteration) {
@@ -143,9 +158,6 @@ namespace lve {
 	}
 
 	void FirstApp::recordCommandBuffer(size_t vertexBufferIndex, int imageIndex) {
-		static int frame = 0;
-		frame = (frame + 1) % 100;
-
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
@@ -180,16 +192,27 @@ namespace lve {
 		vkCmdSetViewport(commandBuffers[imageIndex], 0, 1, &viewport);
 		vkCmdSetScissor(commandBuffers[imageIndex], 0, 1, &scissor);
 
-		lvePipeline->bind(commandBuffers[imageIndex]);
-		lveModel->bind(vertexBufferIndex, commandBuffers[imageIndex]);
+		renderGameObjects(vertexBufferIndex, commandBuffers[imageIndex]);
+		
+		vkCmdEndRenderPass(commandBuffers[imageIndex]);
+		if (vkEndCommandBuffer(commandBuffers[imageIndex]) != VK_SUCCESS) {
+			throw std::runtime_error("failed to record command buffer!");
+		}
+	}
 
-		for (int j = 0; j < 4; j++) {
+	void FirstApp::renderGameObjects(size_t vertexBufferIndex, VkCommandBuffer commandBuffer) {
+		lvePipeline->bind(commandBuffer);
+
+		for (auto& obj : gameObjects) {
+			obj.transform2d.rotation = glm::mod(obj.transform2d.rotation + 0.01f, glm::two_pi<float>());
+
 			SimplePushConstantData push{};
-			push.offset = {-0.5f + frame * 0.02f, -0.4f + j * 0.25f};
-			push.color = {0.0f, 0.0f, 0.2f + 0.2f * j, 1.0f};
+			push.offset = obj.transform2d.translation;
+			push.color = obj.color;
+			push.transform = obj.transform2d.mat2();
 
 			vkCmdPushConstants(
-				commandBuffers[imageIndex],
+				commandBuffer,
 				pipelineLayout,
 				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
 				0,
@@ -197,13 +220,8 @@ namespace lve {
 				&push
 			);
 
-			lveModel->draw(commandBuffers[imageIndex]);
-		}
-
-		
-		vkCmdEndRenderPass(commandBuffers[imageIndex]);
-		if (vkEndCommandBuffer(commandBuffers[imageIndex]) != VK_SUCCESS) {
-			throw std::runtime_error("failed to record command buffer!");
+			obj.model->bind(vertexBufferIndex, commandBuffer);
+			obj.model->draw(commandBuffer);
 		}
 	}
 
@@ -221,8 +239,12 @@ namespace lve {
 			throw std::runtime_error("failed to acquire swap chain image!");
 		}
 
-		lveModel->updateVertexBufferData(lveSwapChain->getCurrentFrame(), vertices);
+		//Set this to allow multiple vertex buffers!
+		//lveModel->updateVertexBufferData(lveSwapChain->getCurrentFrame(), vertices);
+		gameObjects[0].model->updateVertexBufferData(lveSwapChain->getCurrentFrame(), vertices);
 		recordCommandBuffer(lveSwapChain->getCurrentFrame(), imageIndex);
+
+		//recordCommandBuffer(0, imageIndex);
 
 		result = lveSwapChain->submitCommandBuffers(&commandBuffers[imageIndex], &imageIndex);
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || lveWindow.wasWindowResized()) {
