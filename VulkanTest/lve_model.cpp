@@ -9,9 +9,9 @@
 #include <iostream>
 
 namespace lve {
-	LveModel::LveModel(size_t vertexBufferIndex, LveDevice& device, const std::vector<Vertex>& vertices, LveAllocator& allocator) : lveDevice (device), lveAllocator (allocator){
+	LveModel::LveModel(LveDevice& device, const std::vector<Vertex>& vertices, LveAllocator& allocator) : lveDevice (device), lveAllocator (allocator){
 		initVertexBuffers();
-		createVertexBuffer(vertexBufferIndex, vertices);
+		createVertexBuffer(0, vertices);
 	}
 	LveModel::~LveModel() {
 		destroyVertexBuffers();

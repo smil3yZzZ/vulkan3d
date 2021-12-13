@@ -23,7 +23,7 @@ namespace lve {
 				static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
 			};
 
-			LveModel(size_t vertexBufferIndex, LveDevice &device, const std::vector<Vertex> &vertices, LveAllocator &allocator);
+			LveModel(LveDevice &device, const std::vector<Vertex> &vertices, LveAllocator &allocator);
 			~LveModel();
 
 			LveModel(const LveModel&) = delete;
@@ -41,8 +41,6 @@ namespace lve {
 
 			LveDevice& lveDevice;
 			LveAllocator& lveAllocator;
-			VkBuffer vertexBuffer;
-			VkDeviceMemory vertexBufferMemory;
 			std::vector<VkBuffer> vertexBuffers;
 			std::vector<VmaAllocation> vertexBufferAllocations;
 			uint32_t vertexCount;

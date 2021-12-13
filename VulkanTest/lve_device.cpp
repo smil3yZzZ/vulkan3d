@@ -424,8 +424,7 @@ void LveDevice::createBuffer(
 
   VkMemoryAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  allocInfo.allocationSize = memRequirements.size;
-  std::cout << memRequirements.size << std::endl;
+  //allocInfo.allocationSize = memRequirements.size;
   allocInfo.allocationSize = 1000000;
   allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
