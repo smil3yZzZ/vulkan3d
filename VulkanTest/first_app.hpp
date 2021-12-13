@@ -35,6 +35,6 @@ namespace lve {
 
 		LveAllocator lveAllocator{ lveDevice };
 		std::vector<LveGameObject> gameObjects;
-		std::vector<LveModel::Vertex> vertices{};
+		std::vector<std::shared_ptr<LveModel>> gameModels;
 	};
 }

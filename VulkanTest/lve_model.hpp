@@ -29,20 +29,17 @@ namespace lve {
 			LveModel(const LveModel&) = delete;
 			LveModel& operator=(const LveModel&) = delete;
 
-			void bind(size_t vertexBufferIndex, VkCommandBuffer commandBuffer);
+			void bind(VkCommandBuffer commandBuffer);
 			void draw(VkCommandBuffer commandBuffer);
 
-			void updateVertexBufferData(size_t vertexBufferIndex, const std::vector<Vertex>& vertices);
-
 		private:
-			void initVertexBuffers();
-			void createVertexBuffer(size_t vertexBufferIndex, const std::vector<Vertex>& vertices);
-			void destroyVertexBuffers();
+			void createVertexBuffer(const std::vector<Vertex>& vertices);
+			void destroyVertexBuffer();
 
 			LveDevice& lveDevice;
 			LveAllocator& lveAllocator;
-			std::vector<VkBuffer> vertexBuffers;
-			std::vector<VmaAllocation> vertexBufferAllocations;
+			VkBuffer vertexBuffer;
+			VmaAllocation vertexBufferAllocation;
 			uint32_t vertexCount;
 	};
 }

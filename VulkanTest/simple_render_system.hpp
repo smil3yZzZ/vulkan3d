@@ -23,7 +23,7 @@ namespace lve {
 		SimpleRenderSystem(const SimpleRenderSystem&) = delete;
 		SimpleRenderSystem& operator=(const SimpleRenderSystem&) = delete;
 
-		void renderGameObjects(size_t vertexBufferIndex, VkCommandBuffer commandBuffer, std::vector<LveGameObject> &gameObjects, std::vector<LveModel::Vertex> vertices);
+		void renderGameObjects(VkCommandBuffer commandBuffer, std::vector<LveGameObject> &gameObjects);
 
 	private:
 		void createPipelineLayout();

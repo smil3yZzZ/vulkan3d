@@ -62,13 +62,8 @@ namespace lve {
 			);
 	}
 
-	void SimpleRenderSystem::renderGameObjects(size_t vertexBufferIndex, VkCommandBuffer commandBuffer, std::vector<LveGameObject> &gameObjects, std::vector<LveModel::Vertex> vertices) {
+	void SimpleRenderSystem::renderGameObjects(VkCommandBuffer commandBuffer, std::vector<LveGameObject> &gameObjects) {
 		lvePipeline->bind(commandBuffer);
-
-		//Set this to allow multiple vertex buffers!
-		gameObjects[0].model->updateVertexBufferData(vertexBufferIndex, vertices);
-		//gameObjects[0].model->updateVertexBufferData(lveSwapChain->getCurrentFrame(), vertices);
-		//recordCommandBuffer(lveSwapChain->getCurrentFrame(), imageIndex);
 
 		for (auto& obj : gameObjects) {
 			obj.transform2d.rotation = glm::mod(obj.transform2d.rotation + 0.01f, glm::two_pi<float>());
@@ -87,7 +82,7 @@ namespace lve {
 				&push
 			);
 
-			obj.model->bind(vertexBufferIndex, commandBuffer);
+			obj.model->bind(commandBuffer);
 			obj.model->draw(commandBuffer);
 		}
 	}
