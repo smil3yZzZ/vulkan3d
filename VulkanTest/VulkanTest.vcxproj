@@ -153,6 +153,7 @@
   <ItemGroup>
     <ClCompile Include="first_app.cpp" />
     <ClCompile Include="lve_allocator.cpp" />
+    <ClCompile Include="lve_camera.cpp" />
     <ClCompile Include="lve_model.cpp" />
     <ClCompile Include="lve_pipeline.cpp" />
     <ClCompile Include="lve_renderer.cpp" />
@@ -165,6 +166,7 @@
   <ItemGroup>
     <ClInclude Include="first_app.hpp" />
     <ClInclude Include="lve_allocator.hpp" />
+    <ClInclude Include="lve_camera.hpp" />
     <ClInclude Include="lve_game_object.hpp" />
     <ClInclude Include="lve_model.hpp" />
     <ClInclude Include="lve_pipeline.hpp" />
