@@ -28,25 +28,23 @@ namespace lve {
 	}
 
 	void LveAllocator::createBuffer(VkDeviceSize size,
-		VkBufferUsageFlags usage,
+		VkBufferUsageFlags bufferUsage,
+		VmaMemoryUsage memoryUsage,
 		VkMemoryPropertyFlags properties,
 		VkBuffer& buffer,
-		VmaAllocation& constantBufferAllocation,
-		VmaAllocator* allocator) {
+		VmaAllocation& constantBufferAllocation) {
 
 		VkBufferCreateInfo bufferInfo{};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 		bufferInfo.size = size;
-		bufferInfo.usage = usage;
+		bufferInfo.usage = bufferUsage;
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 		VmaAllocationCreateInfo allocInfo = {};
-		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+		allocInfo.usage = memoryUsage;
 		allocInfo.requiredFlags = properties;
 
 		vmaCreateBuffer(this->allocator, &bufferInfo, &allocInfo, &buffer, &constantBufferAllocation, nullptr);
-
-		*allocator = this->allocator;
 	}
 
 	void LveAllocator::destroyBuffer(VkBuffer& buffer, VmaAllocation& constantBufferAllocation) {

@@ -13,12 +13,14 @@ namespace lve {
         LveAllocator(const LveAllocator &) = delete;
         LveAllocator& operator=(const LveAllocator &) = delete;
 
+        VmaAllocator getAllocator() { return allocator; }
+
         void createBuffer(VkDeviceSize size,
             VkBufferUsageFlags usage,
+            VmaMemoryUsage memoryUsage,
             VkMemoryPropertyFlags properties,
             VkBuffer& buffer,
-            VmaAllocation& constantBufferAllocation,
-            VmaAllocator* allocator);
+            VmaAllocation& constantBufferAllocation);
         void destroyBuffer(VkBuffer& buffer, VmaAllocation& constantBufferAllocation);
 
     private:

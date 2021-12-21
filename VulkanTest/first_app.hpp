@@ -18,6 +18,8 @@ namespace lve {
 		static constexpr int HEIGHT = 600;
 		static constexpr int NUMBER_OF_TRIANGLE_VERTICES = 3;
 
+		static constexpr float MIN_SECONDS_PER_FRAME = 1.f/60.f;
+
 		FirstApp();
 		~FirstApp();
 

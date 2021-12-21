@@ -67,8 +67,8 @@ namespace lve {
 		auto projectionView = camera.getProjection() * camera.getView();
 
 		for (auto& obj : gameObjects) {
-			obj.transform.rotation.y = glm::mod(obj.transform.rotation.y + 0.01f, glm::two_pi<float>());
-			obj.transform.rotation.x = glm::mod(obj.transform.rotation.y + 0.001f, glm::two_pi<float>());
+			//obj.transform.rotation.y = glm::mod(obj.transform.rotation.y + 0.01f, glm::two_pi<float>());
+			//obj.transform.rotation.x = glm::mod(obj.transform.rotation.y + 0.001f, glm::two_pi<float>());
 
 			SimplePushConstantData push{};
 			push.color = obj.color;

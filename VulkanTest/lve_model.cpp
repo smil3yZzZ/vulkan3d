@@ -9,47 +9,117 @@
 #include <iostream>
 
 namespace lve {
-	LveModel::LveModel(LveDevice& device, const std::vector<Vertex>& vertices, LveAllocator& allocator) : lveDevice (device), lveAllocator (allocator){
-		createVertexBuffer(vertices);
+	LveModel::LveModel(LveDevice& device, const LveModel::Builder& builder, LveAllocator& allocator) : lveDevice (device), lveAllocator (allocator){
+		createVertexBuffers(builder.vertices);
+		createIndexBuffers(builder.indices);
 	}
 	LveModel::~LveModel() {
-		destroyVertexBuffer();
+		destroyVertexBuffers();
 	}
 
-	void LveModel::createVertexBuffer(const std::vector<Vertex>& vertices) {
+	void LveModel::createVertexBuffers(const std::vector<Vertex>& vertices) {
 		vertexCount = static_cast<uint32_t>(vertices.size());
 		assert(vertexCount >= 3 && "Vertex count must be at least 3");
 		VkDeviceSize bufferSize = sizeof(vertices[0]) * vertexCount;
 
-		VmaAllocator allocator;
+		VmaAllocator allocator = lveAllocator.getAllocator();
+
+		VkBuffer stagingBuffer;
+		VmaAllocation stagingBufferAllocation;
 
 		lveAllocator.createBuffer(bufferSize,
-			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VMA_MEMORY_USAGE_CPU_ONLY,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			vertexBuffer,
-			vertexBufferAllocation,
-			&allocator
+			stagingBuffer,
+			stagingBufferAllocation
 			);
 
 		void* data;
 
-		vmaMapMemory(allocator, vertexBufferAllocation, &data);
+		vmaMapMemory(allocator, stagingBufferAllocation, &data);
 		memcpy(data, vertices.data(), static_cast<size_t>(bufferSize));
-		vmaUnmapMemory(allocator, vertexBufferAllocation);
+		vmaUnmapMemory(allocator, stagingBufferAllocation);
+
+		lveAllocator.createBuffer(bufferSize,
+			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			VMA_MEMORY_USAGE_GPU_ONLY,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			vertexBuffer,
+			vertexBufferAllocation
+		);
+
+		lveDevice.copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+
+		lveAllocator.destroyBuffer(stagingBuffer, stagingBufferAllocation);
 	}
 
-	void LveModel::destroyVertexBuffer() {
+	void LveModel::createIndexBuffers(const std::vector<uint32_t>& indices) {
+		indexCount = static_cast<uint32_t>(indices.size());
+		hasIndexBuffer = indexCount > 0;
+
+		if (!hasIndexBuffer) {
+			return;
+		}
+
+		VkDeviceSize bufferSize = sizeof(indices[0]) * indexCount;
+
+		VmaAllocator allocator = lveAllocator.getAllocator();
+
+		VkBuffer stagingBuffer;
+		VmaAllocation stagingBufferAllocation;
+
+		lveAllocator.createBuffer(bufferSize,
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VMA_MEMORY_USAGE_CPU_ONLY,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			stagingBuffer,
+			stagingBufferAllocation
+		);
+
+		void* data;
+
+		vmaMapMemory(allocator, stagingBufferAllocation, &data);
+		memcpy(data, indices.data(), static_cast<size_t>(bufferSize));
+		vmaUnmapMemory(allocator, stagingBufferAllocation);
+
+		lveAllocator.createBuffer(bufferSize,
+			VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			VMA_MEMORY_USAGE_GPU_ONLY,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			indexBuffer,
+			indexBufferAllocation
+		);
+
+		lveDevice.copyBuffer(stagingBuffer, indexBuffer, bufferSize);
+
+		lveAllocator.destroyBuffer(stagingBuffer, stagingBufferAllocation);
+	}
+
+	void LveModel::destroyVertexBuffers() {
 		lveAllocator.destroyBuffer(vertexBuffer, vertexBufferAllocation);
+		if (hasIndexBuffer) {
+			lveAllocator.destroyBuffer(indexBuffer, indexBufferAllocation);
+		}
 	}
 
 	void LveModel::bind(VkCommandBuffer commandBuffer) {
 		VkBuffer buffers[] = {vertexBuffer};
 		VkDeviceSize offsets[] = {0};
 		vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffers, offsets);
+
+		if (hasIndexBuffer) {
+			vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+		}
 	}
 
 	void LveModel::draw(VkCommandBuffer commandBuffer) {
-		vkCmdDraw(commandBuffer, vertexCount, 1, 0, 0);
+		if (hasIndexBuffer) {
+			vkCmdDrawIndexed(commandBuffer, indexCount, 1, 0, 0, 0);
+		}
+		else {
+			vkCmdDraw(commandBuffer, vertexCount, 1, 0, 0);
+		}
 	}
 
 	std::vector<VkVertexInputBindingDescription> LveModel::Vertex::getBindingDescriptions() {

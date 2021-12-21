@@ -152,6 +152,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="first_app.cpp" />
+    <ClCompile Include="keyboard_movement_controller.cpp" />
     <ClCompile Include="lve_allocator.cpp" />
     <ClCompile Include="lve_camera.cpp" />
     <ClCompile Include="lve_model.cpp" />
@@ -165,6 +166,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="first_app.hpp" />
+    <ClInclude Include="keyboard_movement_controller.hpp" />
     <ClInclude Include="lve_allocator.hpp" />
     <ClInclude Include="lve_camera.hpp" />
     <ClInclude Include="lve_game_object.hpp" />
