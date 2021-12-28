@@ -3,6 +3,7 @@
 #include "lve_device.hpp"
 #include "lve_swap_chain.hpp"
 #include "lve_allocator.hpp"
+#include "lve_transferer.hpp"
 
 // libs
 #define GLM_FORCE_RADIANS
@@ -15,7 +16,6 @@
 namespace lve {
 	class LveModel {
 		public:
-			
 			struct Vertex {
 				glm::vec3 position;
 				glm::vec4 color;
@@ -28,7 +28,12 @@ namespace lve {
 				std::vector<uint32_t> indices{};
 			};
 
-			LveModel(LveDevice &device, const LveModel::Builder &builder, LveAllocator &allocator);
+			struct Buffer {
+				VkBuffer data;
+				VmaAllocation allocation;
+			};
+
+			LveModel(LveDevice &device, LveModel::Builder builder, LveAllocator &allocator, LveTransferer &transferer);
 			~LveModel();
 
 			LveModel(const LveModel&) = delete;
@@ -37,20 +42,36 @@ namespace lve {
 			void bind(VkCommandBuffer commandBuffer);
 			void draw(VkCommandBuffer commandBuffer);
 
-		private:
-			void createVertexBuffers(const std::vector<Vertex>& vertices);
-			void createIndexBuffers(const std::vector<uint32_t>& indices);
+			void createVertexStagingBuffers();
+			void copyVertexStagingBuffers(VkCommandBuffer commandBuffer);
+
+			void createIndexStagingBuffers();
+			void copyIndexStagingBuffers(VkCommandBuffer commandBuffer);
+
 			void destroyVertexBuffers();
+
+		private:
+			void createVertexBuffers();
+			void createIndexBuffers();
 
 			LveDevice& lveDevice;
 			LveAllocator& lveAllocator;
+			LveTransferer& lveTransferer;
 			VkBuffer vertexBuffer;
 			VmaAllocation vertexBufferAllocation;
 			uint32_t vertexCount;
+			VkDeviceSize vertexBufferSize;
+			LveModel::Builder builder;
 
 			bool hasIndexBuffer = false;
 			VkBuffer indexBuffer;
 			VmaAllocation indexBufferAllocation;
 			uint32_t indexCount;
+			VkDeviceSize indexBufferSize;
+
+			VkBuffer vertexStagingBuffer;
+			VmaAllocation vertexStagingBufferAllocation;
+			VkBuffer indexStagingBuffer;
+			VmaAllocation indexStagingBufferAllocation;
 	};
 }

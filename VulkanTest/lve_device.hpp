@@ -17,9 +17,11 @@ struct SwapChainSupportDetails {
 struct QueueFamilyIndices {
   uint32_t graphicsFamily;
   uint32_t presentFamily;
+  uint32_t transferFamily;
   bool graphicsFamilyHasValue = false;
   bool presentFamilyHasValue = false;
-  bool isComplete() { return graphicsFamilyHasValue && presentFamilyHasValue; }
+  bool transferFamilyHasValue = false;
+  bool isComplete() { return graphicsFamilyHasValue && presentFamilyHasValue && transferFamilyHasValue; }
 };
 
 class LveDevice {
@@ -39,13 +41,15 @@ class LveDevice {
   LveDevice(LveDevice &&) = delete;
   LveDevice &operator=(LveDevice &&) = delete;
 
-  VkCommandPool getCommandPool() { return commandPool; }
+  VkCommandPool getGraphicsCommandPool() { return graphicsCommandPool; }
+  VkCommandPool getTransferCommandPool() { return transferCommandPool; }
   VkPhysicalDevice getPhysicalDevice() { return physicalDevice; }
   VkDevice device() { return device_; }
   VkInstance getInstance() { return instance; }
   VkSurfaceKHR surface() { return surface_; }
   VkQueue graphicsQueue() { return graphicsQueue_; }
   VkQueue presentQueue() { return presentQueue_; }
+  VkQueue transferQueue() { return transferQueue_; }
 
   SwapChainSupportDetails getSwapChainSupport() { return querySwapChainSupport(physicalDevice); }
   uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
@@ -80,7 +84,8 @@ class LveDevice {
   void createSurface();
   void pickPhysicalDevice();
   void createLogicalDevice();
-  void createCommandPool();
+  void createGraphicsCommandPool();
+  void createTransferCommandPool();
 
   // helper functions
   bool isDeviceSuitable(VkPhysicalDevice device);
@@ -96,12 +101,14 @@ class LveDevice {
   VkDebugUtilsMessengerEXT debugMessenger;
   VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
   LveWindow &window;
-  VkCommandPool commandPool;
+  VkCommandPool graphicsCommandPool;
+  VkCommandPool transferCommandPool;
 
   VkDevice device_;
   VkSurfaceKHR surface_;
   VkQueue graphicsQueue_;
   VkQueue presentQueue_;
+  VkQueue transferQueue_;
 
   const std::vector<const char *> validationLayers = {"VK_LAYER_KHRONOS_validation"};
   const std::vector<const char *> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};

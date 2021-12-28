@@ -9,39 +9,64 @@
 #include <iostream>
 
 namespace lve {
-	LveModel::LveModel(LveDevice& device, const LveModel::Builder& builder, LveAllocator& allocator) : lveDevice (device), lveAllocator (allocator){
-		createVertexBuffers(builder.vertices);
-		createIndexBuffers(builder.indices);
+	LveModel::LveModel(LveDevice& device, LveModel::Builder builder, LveAllocator& allocator, LveTransferer& transferer) : lveDevice (device), lveAllocator (allocator), lveTransferer(transferer), builder(builder) {
+		std::cout << "Creating model: " << builder.vertices.size() << std::endl;
+		/*
+		if (auto commandBuffer = lveTransferer.beginBufferCopy()) {
+				LveModel::Buffer vertexStagingBuffer{};
+				copyAndGetStagingVertexBuffers(commandBuffer, builder.vertices, vertexStagingBuffer);
+				LveModel::Buffer indexStagingBuffer{};
+				copyAndGetStagingIndexBuffers(commandBuffer, builder.indices, indexStagingBuffer);
+				std::cout << "Index buffer created" << std::endl;
+				lveTransferer.endBufferCopy(commandBuffer);
+				std::cout << "Buffer copy ended" << std::endl;
+				//lveAllocator.destroyBuffer(vertexStagingBuffer.data, vertexStagingBuffer.allocation);
+				//lveAllocator.destroyBuffer(indexStagingBuffer.data, indexStagingBuffer.allocation);
+		}
+		else {
+			throw std::runtime_error("failed to create buffers!");
+		}
+		*/
+		//copyStagingVertexBuffers(builder.vertices);
+		//copyStagingIndexBuffers(builder.indices);
+
 	}
 	LveModel::~LveModel() {
 		destroyVertexBuffers();
 	}
 
-	void LveModel::createVertexBuffers(const std::vector<Vertex>& vertices) {
-		vertexCount = static_cast<uint32_t>(vertices.size());
+	void LveModel::createVertexStagingBuffers() {
+		std::cout << builder.vertices.size() << std::endl;
+
+		vertexCount = static_cast<uint32_t>(builder.vertices.size());
 		assert(vertexCount >= 3 && "Vertex count must be at least 3");
-		VkDeviceSize bufferSize = sizeof(vertices[0]) * vertexCount;
+		vertexBufferSize = sizeof(builder.vertices[0]) * vertexCount;
 
 		VmaAllocator allocator = lveAllocator.getAllocator();
 
-		VkBuffer stagingBuffer;
-		VmaAllocation stagingBufferAllocation;
+		//VkBuffer stagingBuffer;
+		//VmaAllocation stagingBufferAllocation;
 
-		lveAllocator.createBuffer(bufferSize,
+		std::cout << builder.vertices.size() << std::endl;
+		std::cout << vertexCount << std::endl;
+
+		lveAllocator.createBuffer(vertexBufferSize,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VMA_MEMORY_USAGE_CPU_ONLY,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			stagingBuffer,
-			stagingBufferAllocation
+			vertexStagingBuffer,
+			vertexStagingBufferAllocation
 			);
 
 		void* data;
 
-		vmaMapMemory(allocator, stagingBufferAllocation, &data);
-		memcpy(data, vertices.data(), static_cast<size_t>(bufferSize));
-		vmaUnmapMemory(allocator, stagingBufferAllocation);
 
-		lveAllocator.createBuffer(bufferSize,
+
+		vmaMapMemory(allocator, vertexStagingBufferAllocation, &data);
+		memcpy(data, builder.vertices.data(), static_cast<size_t>(vertexBufferSize));
+		vmaUnmapMemory(allocator, vertexStagingBufferAllocation);
+
+		lveAllocator.createBuffer(vertexBufferSize,
 			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			VMA_MEMORY_USAGE_GPU_ONLY,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -49,41 +74,59 @@ namespace lve {
 			vertexBufferAllocation
 		);
 
-		lveDevice.copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+		//lveDevice.copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+		
+		/*
+		if (auto commandBuffer = lveTransferer.beginBufferCopy()) {
+			lveTransferer.performBufferCopy(commandBuffer, stagingBuffer, vertexBuffer, bufferSize);
+			lveTransferer.endBufferCopy(commandBuffer);
+		}
+		else {
+			throw std::runtime_error("failed to copy staging buffer!");
+		}
+		*/
 
-		lveAllocator.destroyBuffer(stagingBuffer, stagingBufferAllocation);
+		//lveTransferer.performBufferCopy(commandBuffer, vertexStagingBuffer, vertexBuffer, vertexBufferSize);
+
+		//vertexStagingBuffer.data = stagingBuffer;
+		//vertexStagingBuffer.allocation = stagingBufferAllocation;
+		//lveAllocator.destroyBuffer(stagingBuffer, stagingBufferAllocation);
 	}
 
-	void LveModel::createIndexBuffers(const std::vector<uint32_t>& indices) {
-		indexCount = static_cast<uint32_t>(indices.size());
+	void LveModel::copyVertexStagingBuffers(VkCommandBuffer commandBuffer) {
+		lveTransferer.performBufferCopy(commandBuffer, vertexStagingBuffer, vertexBuffer, vertexBufferSize);
+	}
+
+	void LveModel::createIndexStagingBuffers() {
+		indexCount = static_cast<uint32_t>(builder.indices.size());
 		hasIndexBuffer = indexCount > 0;
 
 		if (!hasIndexBuffer) {
 			return;
 		}
 
-		VkDeviceSize bufferSize = sizeof(indices[0]) * indexCount;
+		indexBufferSize = sizeof(builder.indices[0]) * indexCount;
 
 		VmaAllocator allocator = lveAllocator.getAllocator();
 
-		VkBuffer stagingBuffer;
-		VmaAllocation stagingBufferAllocation;
+		//VkBuffer stagingBuffer;
+		//VmaAllocation stagingBufferAllocation;
 
-		lveAllocator.createBuffer(bufferSize,
+		lveAllocator.createBuffer(indexBufferSize,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VMA_MEMORY_USAGE_CPU_ONLY,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			stagingBuffer,
-			stagingBufferAllocation
+			indexStagingBuffer,
+			indexStagingBufferAllocation
 		);
 
 		void* data;
 
-		vmaMapMemory(allocator, stagingBufferAllocation, &data);
-		memcpy(data, indices.data(), static_cast<size_t>(bufferSize));
-		vmaUnmapMemory(allocator, stagingBufferAllocation);
+		vmaMapMemory(allocator, indexStagingBufferAllocation, &data);
+		memcpy(data, builder.indices.data(), static_cast<size_t>(indexBufferSize));
+		vmaUnmapMemory(allocator, indexStagingBufferAllocation);
 
-		lveAllocator.createBuffer(bufferSize,
+		lveAllocator.createBuffer(indexBufferSize,
 			VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			VMA_MEMORY_USAGE_GPU_ONLY,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -91,9 +134,18 @@ namespace lve {
 			indexBufferAllocation
 		);
 
-		lveDevice.copyBuffer(stagingBuffer, indexBuffer, bufferSize);
+		//lveDevice.copyBuffer(stagingBuffer, indexBuffer, bufferSize);
+		
+		//lveTransferer.performBufferCopy(commandBuffer, indexStagingBuffer, indexBuffer, indexBufferSize);
 
-		lveAllocator.destroyBuffer(stagingBuffer, stagingBufferAllocation);
+		//indexStagingBuffer.data = stagingBuffer;
+		//indexStagingBuffer.allocation = stagingBufferAllocation;
+
+		//lveAllocator.destroyBuffer(stagingBuffer, stagingBufferAllocation);
+	}
+
+	void LveModel::copyIndexStagingBuffers(VkCommandBuffer commandBuffer) {
+		lveTransferer.performBufferCopy(commandBuffer, indexStagingBuffer, indexBuffer, indexBufferSize);
 	}
 
 	void LveModel::destroyVertexBuffers() {

@@ -1,11 +1,7 @@
 ﻿  first_app.cpp
-  lve_model.cpp
-  lve_pipeline.cpp
-  main.cpp
-  simple_render_system.cpp
   Generando código
-  0 of 2579 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
+  3 of 2778 functions ( 0.1%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
-    0 functions had inline decision re-evaluated but remain unchanged
+    1 functions had inline decision re-evaluated but remain unchanged
   Generación de código finalizada
   VulkanTest.vcxproj -> C:\Users\holivera\source\repos\VulkanTest\x64\Release\VulkanTest.exe

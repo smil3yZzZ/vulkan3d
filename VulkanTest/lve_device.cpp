@@ -53,11 +53,13 @@ LveDevice::LveDevice(LveWindow &window) : window{window} {
   createSurface();
   pickPhysicalDevice();
   createLogicalDevice();
-  createCommandPool();
+  createGraphicsCommandPool();
+  createTransferCommandPool();
 }
 
 LveDevice::~LveDevice() {
-  vkDestroyCommandPool(device_, commandPool, nullptr);
+  vkDestroyCommandPool(device_, transferCommandPool, nullptr);
+  vkDestroyCommandPool(device_, graphicsCommandPool, nullptr);
   vkDestroyDevice(device_, nullptr);
 
   if (enableValidationLayers) {
@@ -137,7 +139,7 @@ void LveDevice::createLogicalDevice() {
   QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 
   std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-  std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily, indices.presentFamily};
+  std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily, indices.presentFamily, indices.transferFamily};
 
   float queuePriority = 1.0f;
   for (uint32_t queueFamily : uniqueQueueFamilies) {
@@ -177,9 +179,10 @@ void LveDevice::createLogicalDevice() {
 
   vkGetDeviceQueue(device_, indices.graphicsFamily, 0, &graphicsQueue_);
   vkGetDeviceQueue(device_, indices.presentFamily, 0, &presentQueue_);
+  vkGetDeviceQueue(device_, indices.transferFamily, 0, &transferQueue_);
 }
 
-void LveDevice::createCommandPool() {
+void LveDevice::createGraphicsCommandPool() {
   QueueFamilyIndices queueFamilyIndices = findPhysicalQueueFamilies();
 
   VkCommandPoolCreateInfo poolInfo = {};
@@ -188,9 +191,23 @@ void LveDevice::createCommandPool() {
   poolInfo.flags =
       VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-  if (vkCreateCommandPool(device_, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+  if (vkCreateCommandPool(device_, &poolInfo, nullptr, &graphicsCommandPool) != VK_SUCCESS) {
     throw std::runtime_error("failed to create command pool!");
   }
+}
+
+void LveDevice::createTransferCommandPool() {
+    QueueFamilyIndices queueFamilyIndices = findPhysicalQueueFamilies();
+
+    VkCommandPoolCreateInfo poolInfo = {};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.queueFamilyIndex = queueFamilyIndices.transferFamily;
+    poolInfo.flags =
+        VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+    if (vkCreateCommandPool(device_, &poolInfo, nullptr, &transferCommandPool) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create command pool!");
+    }
 }
 
 void LveDevice::createSurface() { window.createWindowSurface(instance, &surface_); }
@@ -329,15 +346,20 @@ QueueFamilyIndices LveDevice::findQueueFamilies(VkPhysicalDevice device) {
   int i = 0;
   for (const auto &queueFamily : queueFamilies) {
     if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-      indices.graphicsFamily = i;
-      indices.graphicsFamilyHasValue = true;
+        indices.graphicsFamily = i;
+        indices.graphicsFamilyHasValue = true;
+    }
+    if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) {
+        indices.transferFamily = i;
+        indices.transferFamilyHasValue = true;
     }
     VkBool32 presentSupport = false;
     vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface_, &presentSupport);
     if (queueFamily.queueCount > 0 && presentSupport) {
-      indices.presentFamily = i;
-      indices.presentFamilyHasValue = true;
+        indices.presentFamily = i;
+        indices.presentFamilyHasValue = true;
     }
+
     if (indices.isComplete()) {
       break;
     }
@@ -439,7 +461,7 @@ VkCommandBuffer LveDevice::beginSingleTimeCommands() {
   VkCommandBufferAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  allocInfo.commandPool = commandPool;
+  allocInfo.commandPool = transferCommandPool;
   allocInfo.commandBufferCount = 1;
 
   VkCommandBuffer commandBuffer;
@@ -461,10 +483,10 @@ void LveDevice::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
   submitInfo.commandBufferCount = 1;
   submitInfo.pCommandBuffers = &commandBuffer;
 
-  vkQueueSubmit(graphicsQueue_, 1, &submitInfo, VK_NULL_HANDLE);
-  vkQueueWaitIdle(graphicsQueue_);
+  vkQueueSubmit(transferQueue_, 1, &submitInfo, VK_NULL_HANDLE);
+  //vkQueueWaitIdle(graphicsQueue_);
 
-  vkFreeCommandBuffers(device_, commandPool, 1, &commandBuffer);
+  //vkFreeCommandBuffers(device_, transferCommandPool, 1, &commandBuffer);
 }
 
 void LveDevice::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {

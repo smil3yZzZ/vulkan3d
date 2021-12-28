@@ -34,6 +34,7 @@ namespace lve {
 		LveWindow lveWindow{WIDTH, HEIGHT, "Hello Vulkan!"};
 		LveDevice lveDevice{ lveWindow };
 		LveRenderer lveRenderer{ lveWindow, lveDevice};
+		LveTransferer lveTransferer{ lveDevice };
 
 		LveAllocator lveAllocator{ lveDevice };
 		std::vector<LveGameObject> gameObjects;
