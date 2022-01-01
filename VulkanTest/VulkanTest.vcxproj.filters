@@ -92,6 +92,9 @@
     <ClInclude Include="keyboard_movement_controller.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
+    <ClInclude Include="lve_utils.hpp">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="compile.bat">
