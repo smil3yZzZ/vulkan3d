@@ -70,13 +70,21 @@ namespace lve {
 	}
 
 	void FirstApp::loadGameObjects() {
-		std::shared_ptr<LveModel> cubeModel = LveModel::createModelFromFile(lveDevice, "models/smooth_vase.obj", lveAllocator);
-		gameModels.push_back(std::move(cubeModel));
-		auto gameObj = LveGameObject::createGameObject();
-		gameObj.model = gameModels.back();
-		gameObj.transform.translation = { .0f, .0f, 2.5f};
-		gameObj.transform.scale = glm::vec3(3.f);
-		gameObjects.push_back(std::move(gameObj));
+		std::shared_ptr<LveModel> flatVaseModel = LveModel::createModelFromFile(lveDevice, "models/flat_vase.obj", lveAllocator);
+		gameModels.push_back(std::move(flatVaseModel));
+		auto flatVase = LveGameObject::createGameObject();
+		flatVase.model = gameModels.back();
+		flatVase.transform.translation = { -.5f, .5f, 2.5f};
+		flatVase.transform.scale = glm::vec3(3.f, 1.5f, 3.f);
+		gameObjects.push_back(std::move(flatVase));
+
+		std::shared_ptr<LveModel> smoothVaseModel = LveModel::createModelFromFile(lveDevice, "models/smooth_vase.obj", lveAllocator);
+		gameModels.push_back(std::move(smoothVaseModel));
+		auto smoothVase = LveGameObject::createGameObject();
+		smoothVase.model = gameModels.back();
+		smoothVase.transform.translation = { .5f, .5f, 2.5f };
+		smoothVase.transform.scale = glm::vec3(3.f, 1.5f, 3.f);
+		gameObjects.push_back(std::move(smoothVase));
 	}
 
 }
