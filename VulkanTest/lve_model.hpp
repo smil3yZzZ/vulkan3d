@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lve_device.hpp"
+#include "lve_buffer.hpp"
 #include "lve_swap_chain.hpp"
 #include "lve_allocator.hpp"
 
@@ -56,13 +57,11 @@ namespace lve {
 
 			LveDevice& lveDevice;
 			LveAllocator& lveAllocator;
-			VkBuffer vertexBuffer;
-			VmaAllocation vertexBufferAllocation;
+			std::unique_ptr<LveBuffer> vertexBuffer;
 			uint32_t vertexCount;
 
 			bool hasIndexBuffer = false;
-			VkBuffer indexBuffer;
-			VmaAllocation indexBufferAllocation;
+			std::unique_ptr<LveBuffer> indexBuffer;
 			uint32_t indexCount;
 	};
 }
