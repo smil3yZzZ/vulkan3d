@@ -160,6 +160,7 @@
     <ClCompile Include="lve_allocator.cpp" />
     <ClCompile Include="lve_buffer.cpp" />
     <ClCompile Include="lve_camera.cpp" />
+    <ClCompile Include="lve_descriptors.cpp" />
     <ClCompile Include="lve_game_object.cpp" />
     <ClCompile Include="lve_model.cpp" />
     <ClCompile Include="lve_pipeline.cpp" />
@@ -176,6 +177,7 @@
     <ClInclude Include="lve_allocator.hpp" />
     <ClInclude Include="lve_buffer.hpp" />
     <ClInclude Include="lve_camera.hpp" />
+    <ClInclude Include="lve_descriptors.hpp" />
     <ClInclude Include="lve_frame_info.hpp" />
     <ClInclude Include="lve_game_object.hpp" />
     <ClInclude Include="lve_model.hpp" />
