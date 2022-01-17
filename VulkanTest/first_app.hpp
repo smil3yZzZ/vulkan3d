@@ -40,7 +40,7 @@ namespace lve {
 		std::unique_ptr<LveDescriptorPool> globalPool;
 
 		LveAllocator lveAllocator{ lveDevice };
-		std::vector<LveGameObject> gameObjects;
+		LveGameObject::Map gameObjects;
 		std::vector<std::shared_ptr<LveModel>> gameModels;
 	};
 }
