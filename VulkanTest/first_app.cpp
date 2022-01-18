@@ -23,7 +23,8 @@
 namespace lve {
 
 	struct GlobalUbo {
-		glm::mat4 projectionView{ 1.f };
+		glm::vec3 viewPos;
+		alignas(16) glm::mat4 projectionView{ 1.f };
 		glm::vec4 ambientLightColor{ 1.f, 1.f, 1.f, .05f }; //w is intensity
 		glm::vec3 lightPosition{ -1.f };
 		alignas(16) glm::vec4 lightColor{ 1.f }; // w is light intensity
@@ -110,6 +111,7 @@ namespace lve {
 				};
 				// update
 				GlobalUbo ubo{};
+				ubo.viewPos = viewerObject.transform.translation;
 				ubo.projectionView = camera.getProjection() * camera.getView();
 				uboBuffers[frameIndex]->writeToBuffer(&ubo);
 				uboBuffers[frameIndex]->flush();
