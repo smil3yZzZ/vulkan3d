@@ -42,9 +42,6 @@
     <ClCompile Include="lve_renderer.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
-    <ClCompile Include="simple_render_system.cpp">
-      <Filter>Archivos de recursos</Filter>
-    </ClCompile>
     <ClCompile Include="lve_camera.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
@@ -58,6 +55,12 @@
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
     <ClCompile Include="lve_descriptors.cpp">
+      <Filter>Archivos de recursos</Filter>
+    </ClCompile>
+    <ClCompile Include="systems\simple_render_system.cpp">
+      <Filter>Archivos de recursos</Filter>
+    </ClCompile>
+    <ClCompile Include="systems\point_light_system.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
   </ItemGroup>
@@ -92,9 +95,6 @@
     <ClInclude Include="lve_renderer.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="simple_render_system.hpp">
-      <Filter>Archivos de encabezado</Filter>
-    </ClInclude>
     <ClInclude Include="lve_camera.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
@@ -113,6 +113,12 @@
     <ClInclude Include="lve_descriptors.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
+    <ClInclude Include="systems\simple_render_system.hpp">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="systems\point_light_system.hpp">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="compile.bat">
@@ -122,6 +128,12 @@
       <Filter>Archivos de recursos</Filter>
     </None>
     <None Include="shaders\simple_shader.vert">
+      <Filter>Archivos de recursos</Filter>
+    </None>
+    <None Include="shaders\point_light.frag">
+      <Filter>Archivos de recursos</Filter>
+    </None>
+    <None Include="shaders\point_light.vert">
       <Filter>Archivos de recursos</Filter>
     </None>
   </ItemGroup>
