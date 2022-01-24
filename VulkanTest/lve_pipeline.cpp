@@ -112,7 +112,7 @@ namespace lve {
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 	}
 
-	void LvePipeline::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo) {
+	void LvePipeline::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo, bool hasVertexBufferBound) {
 
 		configInfo.inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 		configInfo.inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -183,7 +183,10 @@ namespace lve {
 			static_cast<uint32_t>(configInfo.dynamicStateEnables.size());
 		configInfo.dynamicStateInfo.flags = 0;
 
-		configInfo.bindingDescriptions = LveModel::Vertex::getBindingDescriptions();
-		configInfo.attributeDescriptions = LveModel::Vertex::getAttributeDescriptions();
+		if (hasVertexBufferBound) {
+			configInfo.bindingDescriptions = LveModel::Vertex::getBindingDescriptions();
+			configInfo.attributeDescriptions = LveModel::Vertex::getAttributeDescriptions();
+		}
+		
 	}
 }

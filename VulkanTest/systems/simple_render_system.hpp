@@ -17,7 +17,7 @@ namespace lve {
 
 		static constexpr int NUMBER_OF_TRIANGLE_VERTICES = 3;
 
-		SimpleRenderSystem(LveDevice &device, VkRenderPass renderPass, VkDescriptorSetLayout globalSetLayout);
+		SimpleRenderSystem(LveDevice &device, VkRenderPass renderPass, VkDescriptorSetLayout gBufferSetLayout, VkDescriptorSetLayout compositionSetLayout);
 		~SimpleRenderSystem();
 
 		SimpleRenderSystem(const SimpleRenderSystem&) = delete;
@@ -26,13 +26,17 @@ namespace lve {
 		void renderGameObjects(FrameInfo &frameInfo);
 
 	private:
-		void createPipelineLayout(VkDescriptorSetLayout globalSetLayout);
-		void createPipeline(VkRenderPass renderPass);
+		void createGBufferPipelineLayout(VkDescriptorSetLayout globalSetLayout);
+		void createGBufferPipeline(VkRenderPass renderPass);
+		void createCompositionPipelineLayout(VkDescriptorSetLayout globalSetLayout);
+		void createCompositionPipeline(VkRenderPass renderPass);
 
 		LveDevice &lveDevice;
 
 		LveAllocator lveAllocator{ lveDevice };
-		std::unique_ptr<LvePipeline> lvePipeline;
-		VkPipelineLayout pipelineLayout;
+		std::unique_ptr<LvePipeline> lveGBufferPipeline;
+		VkPipelineLayout gBufferPipelineLayout;
+		std::unique_ptr<LvePipeline> lveCompositionPipeline;
+		VkPipelineLayout compositionPipelineLayout;
 	};
 }

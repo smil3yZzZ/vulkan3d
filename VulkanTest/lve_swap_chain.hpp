@@ -50,7 +50,8 @@ class LveSwapChain {
  private:
   void init();
   void createSwapChain();
-  void createImageViews();
+  void createSwapChainImageViews();
+  void createResources();
   void createDepthResources();
   void createRenderPass();
   void createFramebuffers();
@@ -65,11 +66,21 @@ class LveSwapChain {
 
   VkFormat swapChainImageFormat;
   VkFormat swapChainDepthFormat;
+  VkFormat deferredResourcesFormat;
   VkExtent2D swapChainExtent;
 
   std::vector<VkFramebuffer> swapChainFramebuffers;
   VkRenderPass renderPass;
 
+  std::vector<VkImage> positionImages;
+  std::vector<VkDeviceMemory> positionImageMemorys;
+  std::vector<VkImageView> positionImageViews;
+  std::vector<VkImage> normalImages;
+  std::vector<VkDeviceMemory> normalImageMemorys;
+  std::vector<VkImageView> normalImageViews;
+  std::vector<VkImage> albedoImages;
+  std::vector<VkDeviceMemory> albedoImageMemorys;
+  std::vector<VkImageView> albedoImageViews;
   std::vector<VkImage> depthImages;
   std::vector<VkDeviceMemory> depthImageMemorys;
   std::vector<VkImageView> depthImageViews;

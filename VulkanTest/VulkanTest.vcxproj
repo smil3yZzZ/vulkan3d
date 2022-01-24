@@ -194,6 +194,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="compile.bat" />
+    <None Include="shaders\composition_shader.frag" />
+    <None Include="shaders\composition_shader.vert" />
+    <None Include="shaders\gbuffer_shader.frag" />
+    <None Include="shaders\gbuffer_shader.vert" />
     <None Include="shaders\point_light.frag" />
     <None Include="shaders\point_light.vert" />
     <None Include="shaders\simple_shader.frag" />
