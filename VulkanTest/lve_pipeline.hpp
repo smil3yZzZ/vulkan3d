@@ -24,6 +24,8 @@ namespace lve {
 		VkPipelineDynamicStateCreateInfo dynamicStateInfo;
 		VkPipelineLayout pipelineLayout = nullptr;
 		VkRenderPass renderPass = nullptr;
+		bool hasVertexBufferBound = true;
+		int attachmentCount = 1;
 		uint32_t subpass = 0;
 	};
 
@@ -36,7 +38,7 @@ namespace lve {
 			LvePipeline& operator=(const LvePipeline&) = delete;
 
 			void bind(VkCommandBuffer commandBuffer);
-			static void defaultPipelineConfigInfo(PipelineConfigInfo& configInfo, bool hasVertexBufferBound);
+			static void defaultPipelineConfigInfo(PipelineConfigInfo& configInfo);
 
 	private:
 		static std::vector<char> readFile(const std::string& filepath);

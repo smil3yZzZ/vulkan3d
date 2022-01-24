@@ -112,7 +112,7 @@ namespace lve {
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 	}
 
-	void LvePipeline::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo, bool hasVertexBufferBound) {
+	void LvePipeline::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo) {
 
 		configInfo.inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 		configInfo.inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -158,8 +158,8 @@ namespace lve {
 		configInfo.colorBlendInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 		configInfo.colorBlendInfo.logicOpEnable = VK_FALSE;
 		configInfo.colorBlendInfo.logicOp = VK_LOGIC_OP_COPY;  // Optional
-		configInfo.colorBlendInfo.attachmentCount = 1;
-		configInfo.colorBlendInfo.pAttachments = &configInfo.colorBlendAttachment;
+		configInfo.colorBlendInfo.attachmentCount = configInfo.attachmentCount;
+		configInfo.colorBlendInfo.pAttachments = &(configInfo.colorBlendAttachment);
 		configInfo.colorBlendInfo.blendConstants[0] = 0.0f;  // Optional
 		configInfo.colorBlendInfo.blendConstants[1] = 0.0f;  // Optional
 		configInfo.colorBlendInfo.blendConstants[2] = 0.0f;  // Optional
@@ -183,7 +183,7 @@ namespace lve {
 			static_cast<uint32_t>(configInfo.dynamicStateEnables.size());
 		configInfo.dynamicStateInfo.flags = 0;
 
-		if (hasVertexBufferBound) {
+		if (configInfo.hasVertexBufferBound) {
 			configInfo.bindingDescriptions = LveModel::Vertex::getBindingDescriptions();
 			configInfo.attributeDescriptions = LveModel::Vertex::getAttributeDescriptions();
 		}

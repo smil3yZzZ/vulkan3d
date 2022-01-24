@@ -55,7 +55,9 @@ namespace lve {
 	void SimpleRenderSystem::createGBufferPipeline(VkRenderPass renderPass) {
 		assert(gBufferPipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
 		PipelineConfigInfo pipelineConfig{};
-		LvePipeline::defaultPipelineConfigInfo(pipelineConfig, true);
+		pipelineConfig.attachmentCount = 3;
+		pipelineConfig.hasVertexBufferBound = true;
+		LvePipeline::defaultPipelineConfigInfo(pipelineConfig);
 		pipelineConfig.renderPass = renderPass;
 		pipelineConfig.subpass = 0;
 		pipelineConfig.pipelineLayout = gBufferPipelineLayout;
@@ -74,7 +76,7 @@ namespace lve {
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
 		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
-		pipelineLayoutInfo.pushConstantRangeCount = 1;
+		pipelineLayoutInfo.pushConstantRangeCount = 0;
 		pipelineLayoutInfo.pPushConstantRanges = nullptr;
 		if (vkCreatePipelineLayout(lveDevice.device(), &pipelineLayoutInfo, nullptr, &compositionPipelineLayout) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create pipeline layout!");
@@ -84,7 +86,9 @@ namespace lve {
 	void SimpleRenderSystem::createCompositionPipeline(VkRenderPass renderPass) {
 		assert(compositionPipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
 		PipelineConfigInfo pipelineConfig{};
-		LvePipeline::defaultPipelineConfigInfo(pipelineConfig, false);
+		pipelineConfig.attachmentCount = 1;
+		pipelineConfig.hasVertexBufferBound = false;
+		LvePipeline::defaultPipelineConfigInfo(pipelineConfig);
 		pipelineConfig.renderPass = renderPass;
 		pipelineConfig.subpass = 1;
 		pipelineConfig.pipelineLayout = compositionPipelineLayout;
@@ -149,7 +153,7 @@ namespace lve {
 			0,
 			nullptr);
 
-		vkCmdDraw(frameInfo.commandBuffer, 3, 1, 0, 0);
+		vkCmdDraw(frameInfo.commandBuffer, 6, 1, 0, 0);
 	}
 
 }

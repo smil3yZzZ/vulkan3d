@@ -69,7 +69,7 @@ namespace lve {
 			pipelineLayout,
 			0,
 			1,
-			&frameInfo.globalDescriptorSet,
+			&frameInfo.gBufferDescriptorSet,
 			0,
 			nullptr);
 
