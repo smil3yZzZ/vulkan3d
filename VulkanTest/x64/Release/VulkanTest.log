@@ -1,11 +1,4 @@
-﻿  first_app.cpp
-  lve_model.cpp
-  lve_pipeline.cpp
-  main.cpp
-  simple_render_system.cpp
-  Generando código
-  0 of 2579 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    0 functions had inline decision re-evaluated but remain unchanged
-  Generación de código finalizada
-  VulkanTest.vcxproj -> C:\Users\holivera\source\repos\VulkanTest\x64\Release\VulkanTest.exe
+﻿  lve_swap_chain.cpp
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\lve_swap_chain.cpp(358,59): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\lve_swap_chain.cpp(360,55): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+LINK : fatal error LNK1104: no se puede abrir el archivo 'C:\Users\holivera\source\repos\VulkanTest\x64\Release\VulkanTest.exe'

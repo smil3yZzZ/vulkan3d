@@ -1,12 +1,12 @@
 #version 450
 
 layout (location = 0) in vec4 fragColor;
-layout (location = 1) in vec3 fragPosWorld;
-layout (location = 2) in vec3 fragNormalWorld;
+layout (location = 1) in vec4 fragPosWorld;
+layout (location = 2) in vec4 fragNormalWorld;
 
 //layout (location = 0) out vec4 outColor;
-layout (location = 0) out vec3 outPosition;
-layout (location = 1) out vec3 outNormal;
+layout (location = 0) out vec4 outPosition;
+layout (location = 1) out vec4 outNormal;
 layout (location = 2) out vec4 outAlbedo;
 
 void main() {
