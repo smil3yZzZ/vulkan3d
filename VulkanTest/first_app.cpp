@@ -48,7 +48,7 @@ namespace lve {
 
 	FirstApp::FirstApp() {
 		globalPool = LveDescriptorPool::Builder(lveDevice)
-			.setMaxSets(LveSwapChain::MAX_FRAMES_IN_FLIGHT)
+			.setMaxSets(2 * LveSwapChain::MAX_FRAMES_IN_FLIGHT)
 			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2 * LveSwapChain::MAX_FRAMES_IN_FLIGHT) 
 			.addPoolSize(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 4 * LveSwapChain::MAX_FRAMES_IN_FLIGHT)
 			.build();
@@ -107,8 +107,23 @@ namespace lve {
 		std::vector<VkDescriptorSet> compositionDescriptorSets(LveSwapChain::MAX_FRAMES_IN_FLIGHT);
 		for (int i = 0; i < compositionDescriptorSets.size(); i++) {
 			auto bufferInfo = compositionUboBuffers[i]->descriptorInfo();
+			auto positionInfo = lveRenderer.getSwapChainAttachments()->position.descriptorInfo();
+			auto normalInfo = lveRenderer.getSwapChainAttachments()->normal.descriptorInfo();
+			auto albedoInfo = lveRenderer.getSwapChainAttachments()->albedo.descriptorInfo();
+			auto depthInfo = lveRenderer.getSwapChainAttachments()->depth.descriptorInfo();
 			LveDescriptorWriter(*compositionSetLayout, *globalPool)
-				.writeBuffer(0, &bufferInfo)
+				.writeImage(0, &positionInfo)
+				.writeImage(1, &normalInfo)
+				.writeImage(2, &albedoInfo)
+				.writeImage(3, &depthInfo)
+				.writeBuffer(4, &bufferInfo)
+				/*
+				.writeImage(0, &)
+				.writeImage(1, &bufferInfo)
+				.writeImage(2, &bufferInfo)
+				.writeImage(3, &bufferInfo)
+				.writeBuffer(4, &bufferInfo)
+				*/
 				.build(compositionDescriptorSets[i]);
 		}
 

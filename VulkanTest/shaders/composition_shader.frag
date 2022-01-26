@@ -3,7 +3,7 @@
 layout (input_attachment_index = 0, binding = 0) uniform subpassInput samplerPosition;
 layout (input_attachment_index = 1, binding = 1) uniform subpassInput samplerNormal;
 layout (input_attachment_index = 2, binding = 2) uniform subpassInput samplerAlbedo;
-layout (input_attachment_index = 3, binding = 3) uniform subpassInput samplerPositionDepth;
+//layout (input_attachment_index = 3, binding = 3) uniform subpassInput samplerPositionDepth;
 
 layout (location = 0) out vec4 outColor;
 
@@ -22,7 +22,7 @@ void main() {
 	vec3 fragPosWorld = subpassLoad(samplerPosition).xyz;
 	vec3 fragNormalWorld = subpassLoad(samplerNormal).xyz;
 	vec4 fragColor = subpassLoad(samplerAlbedo);
-	float depth = subpassLoad(samplerPositionDepth).b;
+	//float depth = subpassLoad(samplerPositionDepth).r;
 
 	vec3 directionToView = normalize(ubo.viewPos - fragPosWorld);
 	vec3 directionToLight = ubo.lightPosition - fragPosWorld;
@@ -39,6 +39,8 @@ void main() {
 
 	float spec = pow(max(dot(normal, halfwayDirection), 0.0), shininess);
 	vec3 specularLight = specularStrength * spec * lightColor;
-
+	
 	outColor = vec4((diffuseLight + ambientLight + specularLight) * fragColor.xyz, fragColor.a);
+
+	//outColor = vec4(fragColor.xyz, fragColor.a);
 }

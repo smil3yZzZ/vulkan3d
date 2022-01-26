@@ -127,7 +127,7 @@ namespace lve {
 			vkCmdPushConstants(
 				frameInfo.commandBuffer,
 				gBufferPipelineLayout,
-				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+				VK_SHADER_STAGE_VERTEX_BIT,
 				0,
 				sizeof(SimplePushConstantData),
 				&push
