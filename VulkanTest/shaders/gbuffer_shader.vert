@@ -9,7 +9,7 @@ layout (location = 0) out vec4 fragColor;
 layout (location = 1) out vec4 fragPosWorld;
 layout (location = 2) out vec4 fragNormalWorld;
 
-layout(set = 0, binding = 0) uniform GlobalUbo {
+layout(set = 0, binding = 0) uniform GBufferUbo {
 	mat4 projection;
 	mat4 view;
 } ubo;

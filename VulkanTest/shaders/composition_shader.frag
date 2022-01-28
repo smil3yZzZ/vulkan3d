@@ -7,7 +7,7 @@ layout (input_attachment_index = 3, binding = 3) uniform subpassInput samplerPos
 
 layout (location = 0) out vec4 outColor;
 
-layout(set = 0, binding = 4) uniform GlobalUbo {
+layout(set = 0, binding = 4) uniform CompositionUbo {
 	vec3 viewPos;
 	vec4 ambientLightColor; //w is intensity
 	vec3 lightPosition;

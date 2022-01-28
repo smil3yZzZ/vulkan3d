@@ -23,17 +23,6 @@
 
 namespace lve {
 
-	/*
-	struct GlobalUbo {
-		glm::vec3 viewPos;
-		alignas(16) glm::mat4 projection{ 1.f };
-		glm::mat4 view{ 1.f };
-		glm::vec4 ambientLightColor{ 1.f, 1.f, 1.f, .05f }; //w is intensity
-		glm::vec3 lightPosition{ -1.f };
-		alignas(16) glm::vec4 lightColor{ .8f, 1.f, .2f, 1.f }; // w is light intensity
-	};
-	*/
-
 	struct GBufferUbo {
 		glm::mat4 projection{ 1.f };
 		glm::mat4 view{ 1.f };
@@ -101,7 +90,7 @@ namespace lve {
 			.addBinding(1, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
 			.addBinding(2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
 			.addBinding(3, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
-			.addBinding(4, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
+			.addBinding(4, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
 			.build();
 
 		std::vector<VkDescriptorSet> compositionDescriptorSets(LveSwapChain::MAX_FRAMES_IN_FLIGHT);
@@ -117,28 +106,16 @@ namespace lve {
 				.writeImage(2, &albedoInfo)
 				.writeImage(3, &depthInfo)
 				.writeBuffer(4, &bufferInfo)
-				/*
-				.writeImage(0, &)
-				.writeImage(1, &bufferInfo)
-				.writeImage(2, &bufferInfo)
-				.writeImage(3, &bufferInfo)
-				.writeBuffer(4, &bufferInfo)
-				*/
 				.build(compositionDescriptorSets[i]);
 		}
 
 		SimpleRenderSystem simpleRenderSystem{lveDevice, lveRenderer.getSwapChainRenderPass(), gBufferSetLayout->getDescriptorSetLayout(), compositionSetLayout->getDescriptorSetLayout()};
-		//PointLightSystem pointLightSystem{ lveDevice, lveRenderer.getSwapChainRenderPass(), globalSetLayout->getDescriptorSetLayout() };
+		PointLightSystem pointLightSystem{ lveDevice, lveRenderer.getSwapChainRenderPass(), gBufferSetLayout->getDescriptorSetLayout(), compositionSetLayout->getDescriptorSetLayout() };
 		LveCamera camera{};
-		//camera.setViewTarget(glm::vec3{ -1.f, -2.f, -2.f }, glm::vec3{ 0.f, 0.f, 2.5f });
 
 		auto viewerObject = LveGameObject::createGameObject();
 		viewerObject.transform.translation.z = -2.5f;
 
-		//viewerObject.transform.translation = glm::vec3{ -1.f, -2.f, -2.f };
-		//std::cout << glm::acos(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, glm::normalize(glm::vec3{ 0.f, 2.f, 4.5f }))) << std::endl;
-		//viewerObject.transform.rotation.x = - glm::acos(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, glm::normalize(glm::vec3{ 0.f, 2.f, 4.5f })));
-		//viewerObject.transform.rotation.y = glm::acos(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, glm::normalize(glm::vec3{ 1.f, 0.f, 4.5f })));
 		KeyboardMovementController cameraController{};
 
 		auto currentTime = std::chrono::high_resolution_clock::now();
@@ -188,8 +165,7 @@ namespace lve {
 				lveRenderer.beginSwapChainRenderPass(commandBuffer);
 				VkExtent2D extent = lveRenderer.getExtent();
 				simpleRenderSystem.renderGameObjects(frameInfo, glm::inverse(camera.getProjection() * camera.getView()), glm::vec2(1.f/extent.width, 1.f/extent.height));
-				//Check this later
-				//pointLightSystem.render(frameInfo);
+				pointLightSystem.render(frameInfo);
 				lveRenderer.endSwapChainRenderPass(commandBuffer);
 				lveRenderer.endFrame();
 			}

@@ -88,20 +88,6 @@ class LveSwapChain {
   std::vector<VkFramebuffer> swapChainFramebuffers;
   VkRenderPass renderPass;
 
-  /*
-  std::vector<VkImage> positionImages;
-  std::vector<VkDeviceMemory> positionImageMemorys;
-  std::vector<VkImageView> positionImageViews;
-  std::vector<VkImage> normalImages;
-  std::vector<VkDeviceMemory> normalImageMemorys;
-  std::vector<VkImageView> normalImageViews;
-  std::vector<VkImage> albedoImages;
-  std::vector<VkDeviceMemory> albedoImageMemorys;
-  std::vector<VkImageView> albedoImageViews;
-  std::vector<VkImage> depthImages;
-  std::vector<VkDeviceMemory> depthImageMemorys;
-  std::vector<VkImageView> depthImageViews;
-  */
   Attachments attachments;
   std::vector<VkImage> swapChainImages;
   std::vector<VkImageView> swapChainImageViews;
