@@ -23,7 +23,7 @@ namespace lve {
 		SimpleRenderSystem(const SimpleRenderSystem&) = delete;
 		SimpleRenderSystem& operator=(const SimpleRenderSystem&) = delete;
 
-		void renderGameObjects(FrameInfo &frameInfo);
+		void renderGameObjects(FrameInfo& frameInfo, glm::mat4 invViewProj, glm::vec2 invResolution);
 
 	private:
 		void createGBufferPipelineLayout(VkDescriptorSetLayout globalSetLayout);
