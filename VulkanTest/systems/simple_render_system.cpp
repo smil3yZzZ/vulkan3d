@@ -15,9 +15,14 @@
 
 namespace lve {
 
-	struct SimplePushConstantData {
+	struct GBufferPushConstantData {
 		glm::mat4 modelMatrix{ 1.f };
 		glm::mat4 normalMatrix{ 1.f };
+	};
+
+	struct CompositionPushConstantData {
+		glm::mat4 invViewProj{ 1.f };
+		glm::vec2 invResolution{ 1.f };
 	};
 
 	SimpleRenderSystem::SimpleRenderSystem(LveDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout gBufferSetLayout, VkDescriptorSetLayout compositionSetLayout) : lveDevice{device} {
@@ -37,7 +42,7 @@ namespace lve {
 		VkPushConstantRange pushConstantRange{};
 		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 		pushConstantRange.offset = 0;
-		pushConstantRange.size = sizeof(SimplePushConstantData);
+		pushConstantRange.size = sizeof(GBufferPushConstantData);
 
 		std::vector<VkDescriptorSetLayout> descriptorSetLayouts{ gBufferSetLayout };
 
@@ -70,14 +75,19 @@ namespace lve {
 	}
 
 	void SimpleRenderSystem::createCompositionPipelineLayout(VkDescriptorSetLayout compositionSetLayout) {
+		VkPushConstantRange pushConstantRange{};
+		pushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		pushConstantRange.offset = 0;
+		pushConstantRange.size = sizeof(CompositionPushConstantData);
+
 		std::vector<VkDescriptorSetLayout> descriptorSetLayouts{ compositionSetLayout };
 
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
 		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
-		pipelineLayoutInfo.pushConstantRangeCount = 0;
-		pipelineLayoutInfo.pPushConstantRanges = nullptr;
+		pipelineLayoutInfo.pushConstantRangeCount = 1;
+		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 		if (vkCreatePipelineLayout(lveDevice.device(), &pipelineLayoutInfo, nullptr, &compositionPipelineLayout) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create pipeline layout!");
 		}
@@ -100,7 +110,7 @@ namespace lve {
 			);
 	}
 
-	void SimpleRenderSystem::renderGameObjects(FrameInfo& frameInfo) {
+	void SimpleRenderSystem::renderGameObjects(FrameInfo& frameInfo, glm::mat4 invViewProj, glm::vec2 invResolution) {
 		// First subpass
 		lveGBufferPipeline->bind(frameInfo.commandBuffer);
 
@@ -119,7 +129,7 @@ namespace lve {
 			//obj.transform.rotation.y = glm::mod(obj.transform.rotation.y + 0.01f, glm::two_pi<float>());
 			//obj.transform.rotation.x = glm::mod(obj.transform.rotation.y + 0.001f, glm::two_pi<float>());
 
-			SimplePushConstantData push{};
+			GBufferPushConstantData push{};
 
 			push.modelMatrix = obj.transform.mat4();
 			push.normalMatrix = obj.transform.normalMatrix();
@@ -129,7 +139,7 @@ namespace lve {
 				gBufferPipelineLayout,
 				VK_SHADER_STAGE_VERTEX_BIT,
 				0,
-				sizeof(SimplePushConstantData),
+				sizeof(GBufferPushConstantData),
 				&push
 			);
 
@@ -152,6 +162,20 @@ namespace lve {
 			&frameInfo.compositionDescriptorSet,
 			0,
 			nullptr);
+
+		CompositionPushConstantData push{};
+
+		push.invViewProj = invViewProj;
+		push.invResolution = invResolution;
+
+		vkCmdPushConstants(
+			frameInfo.commandBuffer,
+			compositionPipelineLayout,
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			0,
+			sizeof(CompositionPushConstantData),
+			&push
+		);
 
 		vkCmdDraw(frameInfo.commandBuffer, 6, 1, 0, 0);
 	}

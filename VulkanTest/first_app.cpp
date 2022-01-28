@@ -186,7 +186,8 @@ namespace lve {
 
 				// render
 				lveRenderer.beginSwapChainRenderPass(commandBuffer);
-				simpleRenderSystem.renderGameObjects(frameInfo);
+				VkExtent2D extent = lveRenderer.getExtent();
+				simpleRenderSystem.renderGameObjects(frameInfo, glm::inverse(camera.getProjection() * camera.getView()), glm::vec2(1.f/extent.width, 1.f/extent.height));
 				//Check this later
 				//pointLightSystem.render(frameInfo);
 				lveRenderer.endSwapChainRenderPass(commandBuffer);

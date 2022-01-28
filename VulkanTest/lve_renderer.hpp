@@ -19,6 +19,7 @@ namespace lve {
 
 		VkRenderPass getSwapChainRenderPass() const { return lveSwapChain->getRenderPass(); }
 		float getAspectRatio() const { return lveSwapChain->extentAspectRatio(); };
+		VkExtent2D getExtent() const { return lveSwapChain->getSwapChainExtent(); };
 		LveSwapChain::Attachments* getSwapChainAttachments() { return lveSwapChain->getAttachments(); };
 		bool isFrameInProgress() const { return isFrameStarted; }
 
