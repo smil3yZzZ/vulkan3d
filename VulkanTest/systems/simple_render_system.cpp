@@ -15,28 +15,36 @@
 
 namespace lve {
 
-	struct SimplePushConstantData {
+	struct GBufferPushConstantData {
 		glm::mat4 modelMatrix{ 1.f };
 		glm::mat4 normalMatrix{ 1.f };
 	};
 
-	SimpleRenderSystem::SimpleRenderSystem(LveDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalSetLayout) : lveDevice{device} {
-		createPipelineLayout(globalSetLayout);
-		createPipeline(renderPass);
+	struct CompositionPushConstantData {
+		glm::mat4 invViewProj{ 1.f };
+		glm::vec2 invResolution{ 1.f };
+	};
+
+	SimpleRenderSystem::SimpleRenderSystem(LveDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout gBufferSetLayout, VkDescriptorSetLayout compositionSetLayout) : lveDevice{device} {
+		createGBufferPipelineLayout(gBufferSetLayout);
+		createGBufferPipeline(renderPass);
+		createCompositionPipelineLayout(compositionSetLayout);
+		createCompositionPipeline(renderPass);
 	}
 
 	SimpleRenderSystem::~SimpleRenderSystem() {
-		vkDestroyPipelineLayout(lveDevice.device(), pipelineLayout, nullptr);
+		vkDestroyPipelineLayout(lveDevice.device(), compositionPipelineLayout, nullptr);
+		vkDestroyPipelineLayout(lveDevice.device(), gBufferPipelineLayout, nullptr);
 	}
 
-	void SimpleRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayout) {
+	void SimpleRenderSystem::createGBufferPipelineLayout(VkDescriptorSetLayout gBufferSetLayout) {
 
 		VkPushConstantRange pushConstantRange{};
-		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 		pushConstantRange.offset = 0;
-		pushConstantRange.size = sizeof(SimplePushConstantData);
+		pushConstantRange.size = sizeof(GBufferPushConstantData);
 
-		std::vector<VkDescriptorSetLayout> descriptorSetLayouts{globalSetLayout};
+		std::vector<VkDescriptorSetLayout> descriptorSetLayouts{ gBufferSetLayout };
 
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -44,35 +52,75 @@ namespace lve {
 		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
-		if (vkCreatePipelineLayout(lveDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+		if (vkCreatePipelineLayout(lveDevice.device(), &pipelineLayoutInfo, nullptr, &gBufferPipelineLayout) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create pipeline layout!");
 		}
 	}
 
-	void SimpleRenderSystem::createPipeline(VkRenderPass renderPass) {
-		assert(pipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
+	void SimpleRenderSystem::createGBufferPipeline(VkRenderPass renderPass) {
+		assert(gBufferPipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
 		PipelineConfigInfo pipelineConfig{};
+		pipelineConfig.attachmentCount = 2;
+		pipelineConfig.hasVertexBufferBound = true;
 		LvePipeline::defaultPipelineConfigInfo(pipelineConfig);
 		pipelineConfig.renderPass = renderPass;
-		pipelineConfig.pipelineLayout = pipelineLayout;
-		lvePipeline = std::make_unique<LvePipeline>(
+		pipelineConfig.subpass = 0;
+		pipelineConfig.pipelineLayout = gBufferPipelineLayout;
+		lveGBufferPipeline = std::make_unique<LvePipeline>(
 			lveDevice,
-			"shaders/simple_shader.vert.spv",
-			"shaders/simple_shader.frag.spv",
+			"shaders/gbuffer_shader.vert.spv",
+			"shaders/gbuffer_shader.frag.spv",
 			pipelineConfig
 			);
 	}
 
-	void SimpleRenderSystem::renderGameObjects(FrameInfo& frameInfo) {
-		lvePipeline->bind(frameInfo.commandBuffer);
+	void SimpleRenderSystem::createCompositionPipelineLayout(VkDescriptorSetLayout compositionSetLayout) {
+		VkPushConstantRange pushConstantRange{};
+		pushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		pushConstantRange.offset = 0;
+		pushConstantRange.size = sizeof(CompositionPushConstantData);
+
+		std::vector<VkDescriptorSetLayout> descriptorSetLayouts{ compositionSetLayout };
+
+		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
+		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
+		pipelineLayoutInfo.pushConstantRangeCount = 1;
+		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
+		if (vkCreatePipelineLayout(lveDevice.device(), &pipelineLayoutInfo, nullptr, &compositionPipelineLayout) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create pipeline layout!");
+		}
+	}
+
+	void SimpleRenderSystem::createCompositionPipeline(VkRenderPass renderPass) {
+		assert(compositionPipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
+		PipelineConfigInfo pipelineConfig{};
+		pipelineConfig.attachmentCount = 1;
+		pipelineConfig.hasVertexBufferBound = false;
+		LvePipeline::defaultPipelineConfigInfo(pipelineConfig);
+		pipelineConfig.renderPass = renderPass;
+		pipelineConfig.subpass = 1;
+		pipelineConfig.pipelineLayout = compositionPipelineLayout;
+		lveCompositionPipeline = std::make_unique<LvePipeline>(
+			lveDevice,
+			"shaders/composition_shader.vert.spv",
+			"shaders/composition_shader.frag.spv",
+			pipelineConfig
+			);
+	}
+
+	void SimpleRenderSystem::renderGameObjects(FrameInfo& frameInfo, glm::mat4 invViewProj, glm::vec2 invResolution) {
+		// First subpass
+		lveGBufferPipeline->bind(frameInfo.commandBuffer);
 
 		vkCmdBindDescriptorSets(
 			frameInfo.commandBuffer,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			pipelineLayout,
+			gBufferPipelineLayout,
 			0,
 			1,
-			&frameInfo.globalDescriptorSet,
+			&frameInfo.gBufferDescriptorSet,
 			0,
 			nullptr);
 
@@ -81,23 +129,55 @@ namespace lve {
 			//obj.transform.rotation.y = glm::mod(obj.transform.rotation.y + 0.01f, glm::two_pi<float>());
 			//obj.transform.rotation.x = glm::mod(obj.transform.rotation.y + 0.001f, glm::two_pi<float>());
 
-			SimplePushConstantData push{};
+			GBufferPushConstantData push{};
 
 			push.modelMatrix = obj.transform.mat4();
 			push.normalMatrix = obj.transform.normalMatrix();
 
 			vkCmdPushConstants(
 				frameInfo.commandBuffer,
-				pipelineLayout,
-				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+				gBufferPipelineLayout,
+				VK_SHADER_STAGE_VERTEX_BIT,
 				0,
-				sizeof(SimplePushConstantData),
+				sizeof(GBufferPushConstantData),
 				&push
 			);
 
 			obj.model->bind(frameInfo.commandBuffer);
 			obj.model->draw(frameInfo.commandBuffer);
 		}
+
+		//Subpass transition
+		vkCmdNextSubpass(frameInfo.commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
+
+		//Second subpass		
+		lveCompositionPipeline->bind(frameInfo.commandBuffer);
+
+		vkCmdBindDescriptorSets(
+			frameInfo.commandBuffer,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			compositionPipelineLayout,
+			0,
+			1,
+			&frameInfo.compositionDescriptorSet,
+			0,
+			nullptr);
+
+		CompositionPushConstantData push{};
+
+		push.invViewProj = invViewProj;
+		push.invResolution = invResolution;
+
+		vkCmdPushConstants(
+			frameInfo.commandBuffer,
+			compositionPipelineLayout,
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			0,
+			sizeof(CompositionPushConstantData),
+			&push
+		);
+
+		vkCmdDraw(frameInfo.commandBuffer, 6, 1, 0, 0);
 	}
 
 }

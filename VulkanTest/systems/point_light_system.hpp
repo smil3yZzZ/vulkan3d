@@ -17,7 +17,7 @@ namespace lve {
 
 		static constexpr int NUMBER_OF_TRIANGLE_VERTICES = 3;
 
-		PointLightSystem(LveDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalSetLayout);
+		PointLightSystem(LveDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout gBufferSetLayout, VkDescriptorSetLayout compositionSetLayout);
 		~PointLightSystem();
 
 		PointLightSystem(const PointLightSystem&) = delete;
@@ -26,7 +26,7 @@ namespace lve {
 		void render(FrameInfo& frameInfo);
 
 	private:
-		void createPipelineLayout(VkDescriptorSetLayout globalSetLayout);
+		void createPipelineLayout(VkDescriptorSetLayout gBufferSetLayout, VkDescriptorSetLayout compositionSetLayout);
 		void createPipeline(VkRenderPass renderPass);
 
 		LveDevice& lveDevice;

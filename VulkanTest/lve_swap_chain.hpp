@@ -13,7 +13,20 @@
 namespace lve {
 
 class LveSwapChain {
+
  public:
+    struct FrameBufferAttachment {
+        VkImage image = VK_NULL_HANDLE;
+        VkDeviceMemory memory = VK_NULL_HANDLE;
+        VkImageView view = VK_NULL_HANDLE;
+        VkFormat format;
+        VkDescriptorImageInfo descriptorInfo(VkSampler sampler = VK_NULL_HANDLE, VkImageLayout imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    };
+
+    struct Attachments {
+        FrameBufferAttachment normal, albedo, depth;
+    };
+
   static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
   LveSwapChain(LveDevice &deviceRef, VkExtent2D windowExtent);
@@ -31,6 +44,7 @@ class LveSwapChain {
   VkExtent2D getSwapChainExtent() { return swapChainExtent; }
   uint32_t width() { return swapChainExtent.width; }
   uint32_t height() { return swapChainExtent.height; }
+  Attachments* getAttachments() { return &attachments; }
 
   float extentAspectRatio() {
     return static_cast<float>(swapChainExtent.width) / static_cast<float>(swapChainExtent.height);
@@ -50,11 +64,14 @@ class LveSwapChain {
  private:
   void init();
   void createSwapChain();
-  void createImageViews();
+  void createSwapChainImageViews();
+  void createDeferredResources();
+  void createAttachment(VkFormat format, VkImageUsageFlags usage, FrameBufferAttachment* attachment, VkExtent2D swapChainExtent);
   void createDepthResources();
   void createRenderPass();
   void createFramebuffers();
   void createSyncObjects();
+  void destroyAttachment(FrameBufferAttachment* attachment);
 
   // Helper functions
   VkSurfaceFormatKHR chooseSwapSurfaceFormat(
@@ -65,14 +82,13 @@ class LveSwapChain {
 
   VkFormat swapChainImageFormat;
   VkFormat swapChainDepthFormat;
+  VkFormat deferredResourcesFormat;
   VkExtent2D swapChainExtent;
 
   std::vector<VkFramebuffer> swapChainFramebuffers;
   VkRenderPass renderPass;
 
-  std::vector<VkImage> depthImages;
-  std::vector<VkDeviceMemory> depthImageMemorys;
-  std::vector<VkImageView> depthImageViews;
+  Attachments attachments;
   std::vector<VkImage> swapChainImages;
   std::vector<VkImageView> swapChainImageViews;
 

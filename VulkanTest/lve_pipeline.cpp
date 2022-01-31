@@ -144,22 +144,26 @@ namespace lve {
 		configInfo.multisampleInfo.alphaToCoverageEnable = VK_FALSE;  // Optional
 		configInfo.multisampleInfo.alphaToOneEnable = VK_FALSE;       // Optional
 
-		configInfo.colorBlendAttachment.colorWriteMask =
-			VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT |
-			VK_COLOR_COMPONENT_A_BIT;
-		configInfo.colorBlendAttachment.blendEnable = VK_TRUE;
-		configInfo.colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;   // Optional
-		configInfo.colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;  // Optional
-		configInfo.colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;              // Optional
-		configInfo.colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;   // Optional
-		configInfo.colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;  // Optional
-		configInfo.colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;              // Optional
+		configInfo.colorBlendAttachment.resize(configInfo.attachmentCount);
+
+		for (int i = 0; i < configInfo.attachmentCount; i++) {
+			configInfo.colorBlendAttachment[i].colorWriteMask =
+				VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT |
+				VK_COLOR_COMPONENT_A_BIT;
+			configInfo.colorBlendAttachment[i].blendEnable = VK_TRUE;
+			configInfo.colorBlendAttachment[i].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;   // Optional
+			configInfo.colorBlendAttachment[i].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;  // Optional
+			configInfo.colorBlendAttachment[i].colorBlendOp = VK_BLEND_OP_ADD;              // Optional
+			configInfo.colorBlendAttachment[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;   // Optional
+			configInfo.colorBlendAttachment[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;  // Optional
+			configInfo.colorBlendAttachment[i].alphaBlendOp = VK_BLEND_OP_ADD;              // Optional
+		}
 
 		configInfo.colorBlendInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 		configInfo.colorBlendInfo.logicOpEnable = VK_FALSE;
 		configInfo.colorBlendInfo.logicOp = VK_LOGIC_OP_COPY;  // Optional
-		configInfo.colorBlendInfo.attachmentCount = 1;
-		configInfo.colorBlendInfo.pAttachments = &configInfo.colorBlendAttachment;
+		configInfo.colorBlendInfo.attachmentCount = configInfo.attachmentCount;
+		configInfo.colorBlendInfo.pAttachments = configInfo.colorBlendAttachment.data();
 		configInfo.colorBlendInfo.blendConstants[0] = 0.0f;  // Optional
 		configInfo.colorBlendInfo.blendConstants[1] = 0.0f;  // Optional
 		configInfo.colorBlendInfo.blendConstants[2] = 0.0f;  // Optional
@@ -183,7 +187,10 @@ namespace lve {
 			static_cast<uint32_t>(configInfo.dynamicStateEnables.size());
 		configInfo.dynamicStateInfo.flags = 0;
 
-		configInfo.bindingDescriptions = LveModel::Vertex::getBindingDescriptions();
-		configInfo.attributeDescriptions = LveModel::Vertex::getAttributeDescriptions();
+		if (configInfo.hasVertexBufferBound) {
+			configInfo.bindingDescriptions = LveModel::Vertex::getBindingDescriptions();
+			configInfo.attributeDescriptions = LveModel::Vertex::getAttributeDescriptions();
+		}
+		
 	}
 }

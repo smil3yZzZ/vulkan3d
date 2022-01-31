@@ -15,8 +15,8 @@
 
 namespace lve {
 
-	PointLightSystem::PointLightSystem(LveDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalSetLayout) : lveDevice{ device } {
-		createPipelineLayout(globalSetLayout);
+	PointLightSystem::PointLightSystem(LveDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout gBufferSetLayout, VkDescriptorSetLayout compositionSetLayout) : lveDevice{ device } {
+		createPipelineLayout(gBufferSetLayout, compositionSetLayout);
 		createPipeline(renderPass);
 	}
 
@@ -24,14 +24,8 @@ namespace lve {
 		vkDestroyPipelineLayout(lveDevice.device(), pipelineLayout, nullptr);
 	}
 
-	void PointLightSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayout) {
-
-		/*VkPushConstantRange pushConstantRange{};
-		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-		pushConstantRange.offset = 0;
-		pushConstantRange.size = sizeof(SimplePushConstantData);*/
-
-		std::vector<VkDescriptorSetLayout> descriptorSetLayouts{ globalSetLayout };
+	void PointLightSystem::createPipelineLayout(VkDescriptorSetLayout gBufferSetLayout, VkDescriptorSetLayout compositionSetLayout) {
+		std::vector<VkDescriptorSetLayout> descriptorSetLayouts{ gBufferSetLayout, compositionSetLayout };
 
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -51,6 +45,7 @@ namespace lve {
 		pipelineConfig.attributeDescriptions.clear();
 		pipelineConfig.bindingDescriptions.clear();
 		pipelineConfig.renderPass = renderPass;
+		pipelineConfig.subpass = 1;
 		pipelineConfig.pipelineLayout = pipelineLayout;
 		lvePipeline = std::make_unique<LvePipeline>(
 			lveDevice,
@@ -69,7 +64,17 @@ namespace lve {
 			pipelineLayout,
 			0,
 			1,
-			&frameInfo.globalDescriptorSet,
+			&frameInfo.gBufferDescriptorSet,
+			0,
+			nullptr);
+
+		vkCmdBindDescriptorSets(
+			frameInfo.commandBuffer,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			pipelineLayout,
+			1,
+			1,
+			&frameInfo.compositionDescriptorSet,
 			0,
 			nullptr);
 

@@ -136,5 +136,17 @@
     <None Include="shaders\point_light.vert">
       <Filter>Archivos de recursos</Filter>
     </None>
+    <None Include="shaders\composition_shader.frag">
+      <Filter>Archivos de recursos</Filter>
+    </None>
+    <None Include="shaders\composition_shader.vert">
+      <Filter>Archivos de recursos</Filter>
+    </None>
+    <None Include="shaders\gbuffer_shader.frag">
+      <Filter>Archivos de recursos</Filter>
+    </None>
+    <None Include="shaders\gbuffer_shader.vert">
+      <Filter>Archivos de recursos</Filter>
+    </None>
   </ItemGroup>
 </Project>

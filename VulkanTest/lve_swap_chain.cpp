@@ -10,7 +10,6 @@
 #include <stdexcept>
 
 namespace lve {
-
 LveSwapChain::LveSwapChain(LveDevice &deviceRef, VkExtent2D extent)
     : device{deviceRef}, windowExtent{extent} {
     init();
@@ -26,9 +25,9 @@ LveSwapChain::LveSwapChain(LveDevice& deviceRef, VkExtent2D extent, std::shared_
 
 void LveSwapChain::init() {
     createSwapChain();
-    createImageViews();
+    createSwapChainImageViews();
+    createDeferredResources();
     createRenderPass();
-    createDepthResources();
     createFramebuffers();
     createSyncObjects();
 }
@@ -44,11 +43,9 @@ LveSwapChain::~LveSwapChain() {
     swapChain = nullptr;
   }
 
-  for (int i = 0; i < depthImages.size(); i++) {
-    vkDestroyImageView(device.device(), depthImageViews[i], nullptr);
-    vkDestroyImage(device.device(), depthImages[i], nullptr);
-    vkFreeMemory(device.device(), depthImageMemorys[i], nullptr);
-  }
+  destroyAttachment(&attachments.normal);
+  destroyAttachment(&attachments.albedo);
+  destroyAttachment(&attachments.depth);
 
   for (auto framebuffer : swapChainFramebuffers) {
     vkDestroyFramebuffer(device.device(), framebuffer, nullptr);
@@ -193,7 +190,7 @@ void LveSwapChain::createSwapChain() {
   swapChainExtent = extent;
 }
 
-void LveSwapChain::createImageViews() {
+void LveSwapChain::createSwapChainImageViews() {
   swapChainImageViews.resize(swapChainImages.size());
   for (size_t i = 0; i < swapChainImages.size(); i++) {
     VkImageViewCreateInfo viewInfo{};
@@ -215,60 +212,116 @@ void LveSwapChain::createImageViews() {
 }
 
 void LveSwapChain::createRenderPass() {
-  VkAttachmentDescription depthAttachment{};
-  depthAttachment.format = findDepthFormat();
-  depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-  depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-  depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-  depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-  depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-  depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+  std::array<VkAttachmentDescription, 4> attachments {};
 
-  VkAttachmentReference depthAttachmentRef{};
-  depthAttachmentRef.attachment = 1;
-  depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+  // Color attachment (swap chain)
+  attachments[0].format = getSwapChainImageFormat();
+  attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
+  attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+  attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+  attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-  VkAttachmentDescription colorAttachment = {};
-  colorAttachment.format = getSwapChainImageFormat();
-  colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-  colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-  colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-  colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-  colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-  colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+  // Deferred attachments
+  // Normals
+  attachments[1].format = deferredResourcesFormat;
+  attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
+  attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+  attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  attachments[1].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+  // Albedo
+  attachments[2].format = deferredResourcesFormat;
+  attachments[2].samples = VK_SAMPLE_COUNT_1_BIT;
+  attachments[2].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+  attachments[2].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  attachments[2].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  attachments[2].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  attachments[2].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  attachments[2].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+  // Depth attachment
+  attachments[3].format = findDepthFormat();
+  attachments[3].samples = VK_SAMPLE_COUNT_1_BIT;
+  attachments[3].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+  attachments[3].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  attachments[3].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  attachments[3].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  attachments[3].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  attachments[3].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-  VkAttachmentReference colorAttachmentRef = {};
-  colorAttachmentRef.attachment = 0;
-  colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+  // Two subpasses
+  std::array<VkSubpassDescription, 2> subpassDescriptions{};
 
-  VkSubpassDescription subpass = {};
-  subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-  subpass.colorAttachmentCount = 1;
-  subpass.pColorAttachments = &colorAttachmentRef;
-  subpass.pDepthStencilAttachment = &depthAttachmentRef;
+  // First subpass: Fill G-Buffer components
+  // ----------------------------------------------------------------------------------------
 
-  VkSubpassDependency dependency = {};
-  dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-  dependency.srcAccessMask = 0;
-  dependency.srcStageMask =
-      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-  dependency.dstSubpass = 0;
-  dependency.dstStageMask =
-      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-  dependency.dstAccessMask =
-      VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+  VkAttachmentReference colorReferences[2];
+  colorReferences[0] = { 1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+  colorReferences[1] = { 2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+  VkAttachmentReference depthReference = { 3, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
-  std::array<VkAttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
+  subpassDescriptions[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+  subpassDescriptions[0].colorAttachmentCount = 2;
+  subpassDescriptions[0].pColorAttachments = colorReferences;
+  subpassDescriptions[0].pDepthStencilAttachment = &depthReference;
+
+  // Second subpass: Final composition (by using previous G-Buffer components)
+  // ----------------------------------------------------------------------------------------
+
+  VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+
+  VkAttachmentReference inputReferences[3];
+  inputReferences[0] = { 1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+  inputReferences[1] = { 2, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+  inputReferences[2] = { 3, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+
+  subpassDescriptions[1].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+  subpassDescriptions[1].colorAttachmentCount = 1;
+  subpassDescriptions[1].pColorAttachments = &colorReference;
+  subpassDescriptions[1].inputAttachmentCount = 3;
+  subpassDescriptions[1].pInputAttachments = inputReferences;
+
+
+  // Subpass dependencies for layout transitions
+  std::array<VkSubpassDependency, 3> dependencies;
+
+  dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+  dependencies[0].dstSubpass = 0;
+  dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+  dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+  dependencies[0].srcAccessMask = 0;
+  dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+  dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+  // This dependency transitions the input attachment from color attachment to shader read
+  dependencies[1].srcSubpass = 0;
+  dependencies[1].dstSubpass = 1;
+  dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+  dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+  dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+  dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+  dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+  dependencies[2].srcSubpass = 1;
+  dependencies[2].dstSubpass = VK_SUBPASS_EXTERNAL;
+  dependencies[2].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+  dependencies[2].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+  dependencies[2].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+  dependencies[2].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+  dependencies[2].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
   VkRenderPassCreateInfo renderPassInfo = {};
   renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
   renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
   renderPassInfo.pAttachments = attachments.data();
-  renderPassInfo.subpassCount = 1;
-  renderPassInfo.pSubpasses = &subpass;
-  renderPassInfo.dependencyCount = 1;
-  renderPassInfo.pDependencies = &dependency;
+  renderPassInfo.subpassCount = subpassDescriptions.size();
+  renderPassInfo.pSubpasses = subpassDescriptions.data();
+  renderPassInfo.dependencyCount = dependencies.size();
+  renderPassInfo.pDependencies = dependencies.data();
 
   if (vkCreateRenderPass(device.device(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
     throw std::runtime_error("failed to create render pass!");
@@ -278,7 +331,7 @@ void LveSwapChain::createRenderPass() {
 void LveSwapChain::createFramebuffers() {
   swapChainFramebuffers.resize(imageCount());
   for (size_t i = 0; i < imageCount(); i++) {
-    std::array<VkImageView, 2> attachments = {swapChainImageViews[i], depthImageViews[i]};
+    std::array<VkImageView, 4> attachments = { swapChainImageViews[i], this->attachments.normal.view, this->attachments.albedo.view, this->attachments.depth.view };
 
     VkExtent2D swapChainExtent = getSwapChainExtent();
     VkFramebufferCreateInfo framebufferInfo = {};
@@ -300,16 +353,28 @@ void LveSwapChain::createFramebuffers() {
   }
 }
 
-void LveSwapChain::createDepthResources() {
-  VkFormat depthFormat = findDepthFormat();
-  swapChainDepthFormat = depthFormat;
-  VkExtent2D swapChainExtent = getSwapChainExtent();
+void LveSwapChain::createDeferredResources() {
+    VkExtent2D swapChainExtent = getSwapChainExtent();
+    deferredResourcesFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
 
-  depthImages.resize(imageCount());
-  depthImageMemorys.resize(imageCount());
-  depthImageViews.resize(imageCount());
+    createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, &attachments.normal, swapChainExtent);
+    createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, &attachments.albedo, swapChainExtent);
+    createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &attachments.depth, swapChainExtent);
+    
+}
 
-  for (int i = 0; i < depthImages.size(); i++) {
+void LveSwapChain::createAttachment(VkFormat format, VkImageUsageFlags usage, FrameBufferAttachment* attachment, VkExtent2D swapChainExtent) {
+    attachment->format = format;
+
+    VkImageAspectFlags imageAspectFlags;
+
+    if (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+        imageAspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
+    }
+    else {
+        imageAspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -318,10 +383,10 @@ void LveSwapChain::createDepthResources() {
     imageInfo.extent.depth = 1;
     imageInfo.mipLevels = 1;
     imageInfo.arrayLayers = 1;
-    imageInfo.format = depthFormat;
+    imageInfo.format = attachment->format;
     imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    imageInfo.usage = usage | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imageInfo.flags = 0;
@@ -329,24 +394,23 @@ void LveSwapChain::createDepthResources() {
     device.createImageWithInfo(
         imageInfo,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        depthImages[i],
-        depthImageMemorys[i]);
+        attachment->image,
+        attachment->memory);
 
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = depthImages[i];
+    viewInfo.image = attachment->image;
     viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format = depthFormat;
-    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    viewInfo.format = attachment->format;
+    viewInfo.subresourceRange.aspectMask = imageAspectFlags;
     viewInfo.subresourceRange.baseMipLevel = 0;
     viewInfo.subresourceRange.levelCount = 1;
     viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.layerCount = 1;
 
-    if (vkCreateImageView(device.device(), &viewInfo, nullptr, &depthImageViews[i]) != VK_SUCCESS) {
-      throw std::runtime_error("failed to create texture image view!");
+    if (vkCreateImageView(device.device(), &viewInfo, nullptr, &attachment->view) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create position image view!");
     }
-  }
 }
 
 void LveSwapChain::createSyncObjects() {
@@ -426,6 +490,20 @@ VkFormat LveSwapChain::findDepthFormat() {
       {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
       VK_IMAGE_TILING_OPTIMAL,
       VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+}
+
+void LveSwapChain::destroyAttachment(FrameBufferAttachment* attachment) {
+    vkDestroyImageView(device.device(), attachment->view, nullptr);
+    vkDestroyImage(device.device(), attachment->image, nullptr);
+    vkFreeMemory(device.device(), attachment->memory, nullptr);
+}
+
+VkDescriptorImageInfo LveSwapChain::FrameBufferAttachment::descriptorInfo(VkSampler sampler, VkImageLayout imageLayout) {
+    return VkDescriptorImageInfo{
+            sampler,
+            view,
+            imageLayout
+    };
 }
 
 }  // namespace lve

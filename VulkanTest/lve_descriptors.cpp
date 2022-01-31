@@ -4,6 +4,8 @@
 #include <cassert>
 #include <stdexcept>
 
+#include <iostream>
+
 namespace lve {
 
     // *************** Descriptor Set Layout Builder *********************
@@ -113,6 +115,7 @@ namespace lve {
         // Might want to create a "DescriptorPoolManager" class that handles this case, and builds
         // a new pool whenever an old pool fills up. But this is beyond our current scope
         if (vkAllocateDescriptorSets(lveDevice.device(), &allocInfo, &descriptor) != VK_SUCCESS) {
+            std::cout << "Couldn't allocate descriptor sets!" << std::endl;
             return false;
         }
         return true;
