@@ -43,7 +43,6 @@ LveSwapChain::~LveSwapChain() {
     swapChain = nullptr;
   }
 
-  destroyAttachment(&attachments.position);
   destroyAttachment(&attachments.normal);
   destroyAttachment(&attachments.albedo);
   destroyAttachment(&attachments.depth);
@@ -213,7 +212,7 @@ void LveSwapChain::createSwapChainImageViews() {
 }
 
 void LveSwapChain::createRenderPass() {
-  std::array<VkAttachmentDescription, 5> attachments {};
+  std::array<VkAttachmentDescription, 4> attachments {};
 
   // Color attachment (swap chain)
   attachments[0].format = getSwapChainImageFormat();
@@ -226,7 +225,7 @@ void LveSwapChain::createRenderPass() {
   attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
   // Deferred attachments
-  // Position
+  // Normals
   attachments[1].format = deferredResourcesFormat;
   attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
   attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -235,7 +234,7 @@ void LveSwapChain::createRenderPass() {
   attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
   attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   attachments[1].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-  // Normals
+  // Albedo
   attachments[2].format = deferredResourcesFormat;
   attachments[2].samples = VK_SAMPLE_COUNT_1_BIT;
   attachments[2].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -244,24 +243,15 @@ void LveSwapChain::createRenderPass() {
   attachments[2].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
   attachments[2].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   attachments[2].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-  // Albedo
-  attachments[3].format = deferredResourcesFormat;
+  // Depth attachment
+  attachments[3].format = findDepthFormat();
   attachments[3].samples = VK_SAMPLE_COUNT_1_BIT;
   attachments[3].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
   attachments[3].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
   attachments[3].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
   attachments[3].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
   attachments[3].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  attachments[3].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-  // Depth attachment
-  attachments[4].format = findDepthFormat();
-  attachments[4].samples = VK_SAMPLE_COUNT_1_BIT;
-  attachments[4].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-  attachments[4].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-  attachments[4].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-  attachments[4].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-  attachments[4].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  attachments[4].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+  attachments[3].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
   // Two subpasses
   std::array<VkSubpassDescription, 2> subpassDescriptions{};
@@ -269,14 +259,13 @@ void LveSwapChain::createRenderPass() {
   // First subpass: Fill G-Buffer components
   // ----------------------------------------------------------------------------------------
 
-  VkAttachmentReference colorReferences[3];
+  VkAttachmentReference colorReferences[2];
   colorReferences[0] = { 1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
   colorReferences[1] = { 2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-  colorReferences[2] = { 3, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-  VkAttachmentReference depthReference = { 4, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+  VkAttachmentReference depthReference = { 3, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
   subpassDescriptions[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-  subpassDescriptions[0].colorAttachmentCount = 3;
+  subpassDescriptions[0].colorAttachmentCount = 2;
   subpassDescriptions[0].pColorAttachments = colorReferences;
   subpassDescriptions[0].pDepthStencilAttachment = &depthReference;
 
@@ -285,16 +274,15 @@ void LveSwapChain::createRenderPass() {
 
   VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 
-  VkAttachmentReference inputReferences[4];
+  VkAttachmentReference inputReferences[3];
   inputReferences[0] = { 1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
   inputReferences[1] = { 2, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
   inputReferences[2] = { 3, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-  inputReferences[3] = { 4, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 
   subpassDescriptions[1].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
   subpassDescriptions[1].colorAttachmentCount = 1;
   subpassDescriptions[1].pColorAttachments = &colorReference;
-  subpassDescriptions[1].inputAttachmentCount = 4;
+  subpassDescriptions[1].inputAttachmentCount = 3;
   subpassDescriptions[1].pInputAttachments = inputReferences;
 
 
@@ -343,8 +331,7 @@ void LveSwapChain::createRenderPass() {
 void LveSwapChain::createFramebuffers() {
   swapChainFramebuffers.resize(imageCount());
   for (size_t i = 0; i < imageCount(); i++) {
-    //std::array<VkImageView, 2> attachments = {swapChainImageViews[i], depthImageViews[i]};
-    std::array<VkImageView, 5> attachments = { swapChainImageViews[i], this->attachments.position.view, this->attachments.normal.view, this->attachments.albedo.view, this->attachments.depth.view };
+    std::array<VkImageView, 4> attachments = { swapChainImageViews[i], this->attachments.normal.view, this->attachments.albedo.view, this->attachments.depth.view };
 
     VkExtent2D swapChainExtent = getSwapChainExtent();
     VkFramebufferCreateInfo framebufferInfo = {};
@@ -370,7 +357,6 @@ void LveSwapChain::createDeferredResources() {
     VkExtent2D swapChainExtent = getSwapChainExtent();
     deferredResourcesFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
 
-    createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, &attachments.position, swapChainExtent);
     createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, &attachments.normal, swapChainExtent);
     createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, &attachments.albedo, swapChainExtent);
     createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &attachments.depth, swapChainExtent);

@@ -24,7 +24,7 @@ class LveSwapChain {
     };
 
     struct Attachments {
-        FrameBufferAttachment position, normal, albedo, depth;
+        FrameBufferAttachment normal, albedo, depth;
     };
 
   static constexpr int MAX_FRAMES_IN_FLIGHT = 2;

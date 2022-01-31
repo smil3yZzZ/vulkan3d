@@ -39,7 +39,7 @@ namespace lve {
 		globalPool = LveDescriptorPool::Builder(lveDevice)
 			.setMaxSets(2 * LveSwapChain::MAX_FRAMES_IN_FLIGHT)
 			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2 * LveSwapChain::MAX_FRAMES_IN_FLIGHT) 
-			.addPoolSize(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 4 * LveSwapChain::MAX_FRAMES_IN_FLIGHT)
+			.addPoolSize(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 3 * LveSwapChain::MAX_FRAMES_IN_FLIGHT)
 			.build();
 		loadGameObjects();
 	}
@@ -89,23 +89,20 @@ namespace lve {
 			.addBinding(0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
 			.addBinding(1, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
 			.addBinding(2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
-			.addBinding(3, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
-			.addBinding(4, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+			.addBinding(3, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
 			.build();
 
 		std::vector<VkDescriptorSet> compositionDescriptorSets(LveSwapChain::MAX_FRAMES_IN_FLIGHT);
 		for (int i = 0; i < compositionDescriptorSets.size(); i++) {
 			auto bufferInfo = compositionUboBuffers[i]->descriptorInfo();
-			auto positionInfo = lveRenderer.getSwapChainAttachments()->position.descriptorInfo();
 			auto normalInfo = lveRenderer.getSwapChainAttachments()->normal.descriptorInfo();
 			auto albedoInfo = lveRenderer.getSwapChainAttachments()->albedo.descriptorInfo();
 			auto depthInfo = lveRenderer.getSwapChainAttachments()->depth.descriptorInfo();
 			LveDescriptorWriter(*compositionSetLayout, *globalPool)
-				.writeImage(0, &positionInfo)
-				.writeImage(1, &normalInfo)
-				.writeImage(2, &albedoInfo)
-				.writeImage(3, &depthInfo)
-				.writeBuffer(4, &bufferInfo)
+				.writeImage(0, &normalInfo)
+				.writeImage(1, &albedoInfo)
+				.writeImage(2, &depthInfo)
+				.writeBuffer(3, &bufferInfo)
 				.build(compositionDescriptorSets[i]);
 		}
 

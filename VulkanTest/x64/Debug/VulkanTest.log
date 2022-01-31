@@ -1,16 +1,2 @@
-﻿  first_app.cpp
-  keyboard_movement_controller.cpp
-  lve_allocator.cpp
-  lve_buffer.cpp
-  lve_game_object.cpp
-  lve_model.cpp
-  lve_pipeline.cpp
-  lve_renderer.cpp
-  lve_swap_chain.cpp
-C:\Users\holivera\source\repos\VulkanTest\VulkanTest\lve_swap_chain.cpp(333,59): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
-C:\Users\holivera\source\repos\VulkanTest\VulkanTest\lve_swap_chain.cpp(335,55): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
-  main.cpp
-  point_light_system.cpp
-  simple_render_system.cpp
-  Generando código...
+﻿  lve_renderer.cpp
   VulkanTest.vcxproj -> C:\Users\holivera\source\repos\VulkanTest\x64\Debug\VulkanTest.exe
