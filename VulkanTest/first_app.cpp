@@ -70,7 +70,7 @@ namespace lve {
 					gameObjects
 				};
 				// update
-				LveRenderer::GBufferUbo gBufferUbo{};
+				LveSwapChain::GBufferUbo gBufferUbo{};
 				gBufferUbo.projection = camera.getProjection();
 				gBufferUbo.view = camera.getView();
 				
@@ -80,7 +80,7 @@ namespace lve {
 				*/
 				lveRenderer.updateCurrentGBufferUbo(&gBufferUbo);
 
-				LveRenderer::CompositionUbo compositionUbo{};
+				LveSwapChain::CompositionUbo compositionUbo{};
 				compositionUbo.viewPos = viewerObject.transform.translation;
 
 				lveRenderer.updateCurrentCompositionUbo(&compositionUbo);

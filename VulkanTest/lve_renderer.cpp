@@ -26,19 +26,16 @@ namespace lve {
 		}
 		vkDeviceWaitIdle(lveDevice.device());
 		if (lveSwapChain == nullptr) {
-			lveSwapChain = std::make_unique<LveSwapChain>(lveDevice, extent);
-			createDescriptorPool(lveSwapChain->imageCount());
+			lveSwapChain = std::make_unique<LveSwapChain>(lveDevice, lveAllocator, extent);
 		}
 		else {
-			globalPool->resetPool();
 			std::shared_ptr<LveSwapChain> oldSwapChain = std::move(lveSwapChain);
-			lveSwapChain = std::make_unique<LveSwapChain>(lveDevice, extent, oldSwapChain);
+			lveSwapChain = std::make_unique<LveSwapChain>(lveDevice, lveAllocator, extent, oldSwapChain);
 
 			if (!oldSwapChain->compareSwapFormats(*lveSwapChain.get())) {
 				throw std::runtime_error("Swap chain image(or depth) format has changed!");
 			}
 		}
-		createUniformBuffers(lveSwapChain->imageCount());
 	}
 
 	void LveRenderer::createCommandBuffers() {
@@ -144,89 +141,6 @@ namespace lve {
 		assert(isFrameStarted && "Can't call endSwapChainRenderPass if frame is not in progress");
 		assert(commandBuffer == getCurrentCommandBuffer() && "Can't end render pass on command buffer from a different frame");
 		vkCmdEndRenderPass(commandBuffer);
-	}
-
-	void LveRenderer::createDescriptorPool(int imageCount) {
-		globalPool = LveDescriptorPool::Builder(lveDevice)
-			.setMaxSets(2 * imageCount)
-			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2 * imageCount)
-			.addPoolSize(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 3 * imageCount)
-			.build();
-	}
-
-	void LveRenderer::createUniformBuffers(int imageCount) {
-		gBufferUboBuffers.clear();
-		compositionUboBuffers.clear();
-		gBufferUboBuffers.resize(imageCount);
-		compositionUboBuffers.resize(imageCount);
-
-		for (int i = 0; i < imageCount; i++) {
-			gBufferUboBuffers[i] = std::make_unique<LveBuffer>(
-				lveDevice,
-				sizeof(GBufferUbo),
-				1,
-				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-				VMA_MEMORY_USAGE_CPU_TO_GPU,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-				lveAllocator
-				);
-			gBufferUboBuffers[i]->map();
-			compositionUboBuffers[i] = std::make_unique<LveBuffer>(
-				lveDevice,
-				sizeof(CompositionUbo),
-				1,
-				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-				VMA_MEMORY_USAGE_CPU_TO_GPU,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-				lveAllocator
-				);
-			compositionUboBuffers[i]->map();
-		}
-
-		gBufferSetLayout = LveDescriptorSetLayout::Builder(lveDevice)
-			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-			.build();
-
-		gBufferDescriptorSets.clear();
-		gBufferDescriptorSets.resize(imageCount);
-		for (int i = 0; i < gBufferDescriptorSets.size(); i++) {
-			auto bufferInfo = gBufferUboBuffers[i]->descriptorInfo();
-			LveDescriptorWriter(*gBufferSetLayout, *globalPool)
-				.writeBuffer(0, &bufferInfo)
-				.build(gBufferDescriptorSets[i]);
-		}
-
-		compositionSetLayout = LveDescriptorSetLayout::Builder(lveDevice)
-			.addBinding(0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
-			.addBinding(1, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
-			.addBinding(2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
-			.addBinding(3, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
-			.build();
-
-		compositionDescriptorSets.clear();
-		compositionDescriptorSets.resize(imageCount);
-		std::vector<LveSwapChain::Attachments> attachmentsVector = getSwapChainAttachments();
-		for (int i = 0; i < compositionDescriptorSets.size(); i++) {
-			auto bufferInfo = compositionUboBuffers[i]->descriptorInfo();
-			auto normalInfo = attachmentsVector[i].normal.descriptorInfo();
-			auto albedoInfo = attachmentsVector[i].albedo.descriptorInfo();
-			auto depthInfo = attachmentsVector[i].depth.descriptorInfo();
-			LveDescriptorWriter(*compositionSetLayout, *globalPool)
-				.writeImage(0, &normalInfo)
-				.writeImage(1, &albedoInfo)
-				.writeImage(2, &depthInfo)
-				.writeBuffer(3, &bufferInfo)
-				.build(compositionDescriptorSets[i]);
-		}
-	}
-
-	void LveRenderer::updateCurrentGBufferUbo(void* data) {
-		gBufferUboBuffers[currentImageIndex]->writeToBuffer(data);
-		gBufferUboBuffers[currentImageIndex]->flush();
-	}
-	void LveRenderer::updateCurrentCompositionUbo(void* data) {
-		compositionUboBuffers[currentImageIndex]->writeToBuffer(data);
-		compositionUboBuffers[currentImageIndex]->flush();
 	}
 
 }

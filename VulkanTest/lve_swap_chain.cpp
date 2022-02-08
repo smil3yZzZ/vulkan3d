@@ -10,13 +10,13 @@
 #include <stdexcept>
 
 namespace lve {
-LveSwapChain::LveSwapChain(LveDevice &deviceRef, VkExtent2D extent)
-    : device{deviceRef}, windowExtent{extent} {
+LveSwapChain::LveSwapChain(LveDevice &deviceRef, LveAllocator &allocatorRef, VkExtent2D extent)
+    : device{ deviceRef }, allocator{ allocatorRef }, windowExtent{ extent }  {
     init();
 }
 
-LveSwapChain::LveSwapChain(LveDevice& deviceRef, VkExtent2D extent, std::shared_ptr<LveSwapChain> previous)
-    : device{ deviceRef }, windowExtent{ extent }, oldSwapChain{ previous } {
+LveSwapChain::LveSwapChain(LveDevice& deviceRef, LveAllocator& allocatorRef, VkExtent2D extent, std::shared_ptr<LveSwapChain> previous)
+    : device{ deviceRef }, allocator{ allocatorRef }, windowExtent{ extent }, oldSwapChain{ previous } {
     init();
 
     // clean up old swap chain since it's no longer needed
@@ -34,6 +34,7 @@ void LveSwapChain::init() {
     createCompositionFramebuffers();
     createSyncObjects();
     createDescriptorPool();
+    createUniformBuffers();
 }
 
 LveSwapChain::~LveSwapChain() {
@@ -367,14 +368,11 @@ void LveSwapChain::createDeferredResources() {
 
     attachmentsVector.resize(imageCount());
 
-    std::cout << attachmentsVector.size() << std::endl;
-
     for (auto& attachments : attachmentsVector) {
         createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, &attachments.normal, swapChainExtent);
         createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, &attachments.albedo, swapChainExtent);
         createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &attachments.depth, swapChainExtent);
-    }
-    
+    }   
 }
 
 void LveSwapChain::createAttachment(VkFormat format, VkImageUsageFlags usage, FrameBufferAttachment* attachment, VkExtent2D swapChainExtent) {
@@ -537,7 +535,86 @@ void LveSwapChain::destroySampler(Sampler* sampler) {
 }
 
 void LveSwapChain::createDescriptorPool() {
+    globalPool = LveDescriptorPool::Builder(device)
+        .setMaxSets(2 * imageCount())
+        .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2 * imageCount())
+        .addPoolSize(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 3 * imageCount())
+        .build();
+}
 
+void LveSwapChain::createUniformBuffers() {
+    gBufferUboBuffers.clear();
+    compositionUboBuffers.clear();
+    gBufferUboBuffers.resize(imageCount());
+    compositionUboBuffers.resize(imageCount());
+
+    for (int i = 0; i < imageCount(); i++) {
+        gBufferUboBuffers[i] = std::make_unique<LveBuffer>(
+            device,
+            sizeof(GBufferUbo),
+            1,
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VMA_MEMORY_USAGE_CPU_TO_GPU,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+            allocator
+            );
+        gBufferUboBuffers[i]->map();
+        compositionUboBuffers[i] = std::make_unique<LveBuffer>(
+            device,
+            sizeof(CompositionUbo),
+            1,
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VMA_MEMORY_USAGE_CPU_TO_GPU,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+            allocator
+            );
+        compositionUboBuffers[i]->map();
+    }
+
+    gBufferSetLayout = LveDescriptorSetLayout::Builder(device)
+        .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+        .build();
+
+    gBufferDescriptorSets.clear();
+    gBufferDescriptorSets.resize(imageCount());
+    for (int i = 0; i < gBufferDescriptorSets.size(); i++) {
+        auto bufferInfo = gBufferUboBuffers[i]->descriptorInfo();
+        LveDescriptorWriter(*gBufferSetLayout, *globalPool)
+            .writeBuffer(0, &bufferInfo)
+            .build(gBufferDescriptorSets[i]);
+    }
+
+    compositionSetLayout = LveDescriptorSetLayout::Builder(device)
+        .addBinding(0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
+        .addBinding(1, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
+        .addBinding(2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
+        .addBinding(3, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+        .build();
+
+    compositionDescriptorSets.clear();
+    compositionDescriptorSets.resize(imageCount());
+
+    for (int i = 0; i < compositionDescriptorSets.size(); i++) {
+        auto bufferInfo = compositionUboBuffers[i]->descriptorInfo();
+        auto normalInfo = attachmentsVector[i].normal.descriptorInfo();
+        auto albedoInfo = attachmentsVector[i].albedo.descriptorInfo();
+        auto depthInfo = attachmentsVector[i].depth.descriptorInfo();
+        LveDescriptorWriter(*compositionSetLayout, *globalPool)
+            .writeImage(0, &normalInfo)
+            .writeImage(1, &albedoInfo)
+            .writeImage(2, &depthInfo)
+            .writeBuffer(3, &bufferInfo)
+            .build(compositionDescriptorSets[i]);
+    }
+}
+
+void LveSwapChain::updateCurrentGBufferUbo(void* data, int currentImageIndex) {
+    gBufferUboBuffers[currentImageIndex]->writeToBuffer(data);
+    gBufferUboBuffers[currentImageIndex]->flush();
+}
+void LveSwapChain::updateCurrentCompositionUbo(void* data, int currentImageIndex) {
+    compositionUboBuffers[currentImageIndex]->writeToBuffer(data);
+    compositionUboBuffers[currentImageIndex]->flush();
 }
 
 }  // namespace lve
