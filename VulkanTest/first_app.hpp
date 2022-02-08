@@ -1,6 +1,5 @@
 #pragma once
 
-#include "lve_descriptors.hpp"
 #include "lve_window.hpp"
 #include "lve_device.hpp"
 #include "lve_game_object.hpp"
@@ -34,12 +33,11 @@ namespace lve {
 
 		LveWindow lveWindow{WIDTH, HEIGHT, "Hello Vulkan!"};
 		LveDevice lveDevice{ lveWindow };
-		LveRenderer lveRenderer{ lveWindow, lveDevice};
+		LveAllocator lveAllocator{ lveDevice };
+		LveRenderer lveRenderer{ lveWindow, lveDevice, lveAllocator};
 
 		// note: order of declarations matters
-		std::unique_ptr<LveDescriptorPool> globalPool;
 
-		LveAllocator lveAllocator{ lveDevice };
 		LveGameObject::Map gameObjects;
 		std::vector<std::shared_ptr<LveModel>> gameModels;
 	};

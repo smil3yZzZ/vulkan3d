@@ -27,9 +27,13 @@ void LveSwapChain::init() {
     createSwapChain();
     createSwapChainImageViews();
     createDeferredResources();
-    createRenderPass();
-    createFramebuffers();
+    //createSampler();
+    createShadowRenderPass();
+    createCompositionRenderPass();
+    createShadowFramebuffers();
+    createCompositionFramebuffers();
     createSyncObjects();
+    createDescriptorPool();
 }
 
 LveSwapChain::~LveSwapChain() {
@@ -43,9 +47,13 @@ LveSwapChain::~LveSwapChain() {
     swapChain = nullptr;
   }
 
-  destroyAttachment(&attachments.normal);
-  destroyAttachment(&attachments.albedo);
-  destroyAttachment(&attachments.depth);
+  for (auto& attachments : attachmentsVector) {
+      destroyAttachment(&attachments.normal);
+      destroyAttachment(&attachments.albedo);
+      destroyAttachment(&attachments.depth);
+  }
+  attachmentsVector.clear();
+  
 
   for (auto framebuffer : swapChainFramebuffers) {
     vkDestroyFramebuffer(device.device(), framebuffer, nullptr);
@@ -211,7 +219,7 @@ void LveSwapChain::createSwapChainImageViews() {
   }
 }
 
-void LveSwapChain::createRenderPass() {
+void LveSwapChain::createCompositionRenderPass() {
   std::array<VkAttachmentDescription, 4> attachments {};
 
   // Color attachment (swap chain)
@@ -328,10 +336,10 @@ void LveSwapChain::createRenderPass() {
   }
 }
 
-void LveSwapChain::createFramebuffers() {
+void LveSwapChain::createCompositionFramebuffers() {
   swapChainFramebuffers.resize(imageCount());
   for (size_t i = 0; i < imageCount(); i++) {
-    std::array<VkImageView, 4> attachments = { swapChainImageViews[i], this->attachments.normal.view, this->attachments.albedo.view, this->attachments.depth.view };
+    std::array<VkImageView, 4> attachments = { swapChainImageViews[i], this->attachmentsVector[i].normal.view, this->attachmentsVector[i].albedo.view, this->attachmentsVector[i].depth.view };
 
     VkExtent2D swapChainExtent = getSwapChainExtent();
     VkFramebufferCreateInfo framebufferInfo = {};
@@ -357,9 +365,15 @@ void LveSwapChain::createDeferredResources() {
     VkExtent2D swapChainExtent = getSwapChainExtent();
     deferredResourcesFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
 
-    createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, &attachments.normal, swapChainExtent);
-    createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, &attachments.albedo, swapChainExtent);
-    createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &attachments.depth, swapChainExtent);
+    attachmentsVector.resize(imageCount());
+
+    std::cout << attachmentsVector.size() << std::endl;
+
+    for (auto& attachments : attachmentsVector) {
+        createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, &attachments.normal, swapChainExtent);
+        createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, &attachments.albedo, swapChainExtent);
+        createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &attachments.depth, swapChainExtent);
+    }
     
 }
 
@@ -504,6 +518,26 @@ VkDescriptorImageInfo LveSwapChain::FrameBufferAttachment::descriptorInfo(VkSamp
             view,
             imageLayout
     };
+}
+
+void LveSwapChain::createSampler(VkFormat format, VkImageUsageFlags usage, FrameBufferAttachment* attachment, VkExtent2D swapChainExtent) {
+
+}
+
+void LveSwapChain::createShadowRenderPass() {
+
+}
+
+void LveSwapChain::createShadowFramebuffers() {
+
+}
+
+void LveSwapChain::destroySampler(Sampler* sampler) {
+
+}
+
+void LveSwapChain::createDescriptorPool() {
+
 }
 
 }  // namespace lve

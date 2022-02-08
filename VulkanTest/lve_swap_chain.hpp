@@ -23,6 +23,15 @@ class LveSwapChain {
         VkDescriptorImageInfo descriptorInfo(VkSampler sampler = VK_NULL_HANDLE, VkImageLayout imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     };
 
+    struct Sampler {
+        VkSampler sampler;
+        FrameBufferAttachment attachment;
+    };
+
+    struct Samplers {
+        Sampler shadowDepth;
+    };
+
     struct Attachments {
         FrameBufferAttachment normal, albedo, depth;
     };
@@ -44,7 +53,7 @@ class LveSwapChain {
   VkExtent2D getSwapChainExtent() { return swapChainExtent; }
   uint32_t width() { return swapChainExtent.width; }
   uint32_t height() { return swapChainExtent.height; }
-  Attachments* getAttachments() { return &attachments; }
+  std::vector<Attachments> getAttachments() { return attachmentsVector; }
 
   float extentAspectRatio() {
     return static_cast<float>(swapChainExtent.width) / static_cast<float>(swapChainExtent.height);
@@ -67,11 +76,15 @@ class LveSwapChain {
   void createSwapChainImageViews();
   void createDeferredResources();
   void createAttachment(VkFormat format, VkImageUsageFlags usage, FrameBufferAttachment* attachment, VkExtent2D swapChainExtent);
-  void createDepthResources();
-  void createRenderPass();
-  void createFramebuffers();
+  void createSampler(VkFormat format, VkImageUsageFlags usage, FrameBufferAttachment* attachment, VkExtent2D swapChainExtent);
+  void createCompositionRenderPass();
+  void createShadowRenderPass();
+  void createCompositionFramebuffers();
+  void createShadowFramebuffers();
   void createSyncObjects();
+  void createDescriptorPool();
   void destroyAttachment(FrameBufferAttachment* attachment);
+  void destroySampler(Sampler* sampler);
 
   // Helper functions
   VkSurfaceFormatKHR chooseSwapSurfaceFormat(
@@ -88,7 +101,7 @@ class LveSwapChain {
   std::vector<VkFramebuffer> swapChainFramebuffers;
   VkRenderPass renderPass;
 
-  Attachments attachments;
+  std::vector<Attachments> attachmentsVector;
   std::vector<VkImage> swapChainImages;
   std::vector<VkImageView> swapChainImageViews;
 
