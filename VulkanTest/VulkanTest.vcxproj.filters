@@ -63,6 +63,9 @@
     <ClCompile Include="systems\point_light_system.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
+    <ClCompile Include="systems\shadow_render_system.cpp">
+      <Filter>Archivos de recursos</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lve_window.hpp">
@@ -119,6 +122,9 @@
     <ClInclude Include="systems\point_light_system.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
+    <ClInclude Include="systems\shadow_render_system.hpp">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="compile.bat">
@@ -146,6 +152,12 @@
       <Filter>Archivos de recursos</Filter>
     </None>
     <None Include="shaders\gbuffer_shader.vert">
+      <Filter>Archivos de recursos</Filter>
+    </None>
+    <None Include="shaders\shadow_shader.frag">
+      <Filter>Archivos de recursos</Filter>
+    </None>
+    <None Include="shaders\shadow_shader.vert">
       <Filter>Archivos de recursos</Filter>
     </None>
   </ItemGroup>

@@ -7,10 +7,12 @@ layout(location = 3) in vec2 uv;
 
 layout (location = 0) out vec4 fragColor;
 layout (location = 1) out vec4 fragNormalWorld;
+layout (location = 2) out vec4 lightSpacePos;
 
 layout(set = 0, binding = 0) uniform GBufferUbo {
 	mat4 projection;
 	mat4 view;
+	mat4 lightProjectionView;
 } ubo;
 
 layout(push_constant) uniform Push {
@@ -23,6 +25,7 @@ void main() {
 
 	gl_Position = ubo.projection * ubo.view * positionWorld;
 
-	fragNormalWorld = vec4(normalize(mat3(push.normalMatrix) * normal), 1.0);
 	fragColor = color;
+	fragNormalWorld = vec4(normalize(mat3(push.normalMatrix) * normal), 1.0);
+	lightSpacePos = ubo.lightProjectionView * positionWorld;; 
 }

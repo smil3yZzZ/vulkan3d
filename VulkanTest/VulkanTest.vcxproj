@@ -170,6 +170,7 @@
     <ClCompile Include="lve_device.cpp" />
     <ClCompile Include="lve_swap_chain.cpp" />
     <ClCompile Include="systems\point_light_system.cpp" />
+    <ClCompile Include="systems\shadow_render_system.cpp" />
     <ClCompile Include="systems\simple_render_system.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -189,6 +190,7 @@
     <ClInclude Include="lve_device.hpp" />
     <ClInclude Include="lve_swap_chain.hpp" />
     <ClInclude Include="systems\point_light_system.hpp" />
+    <ClInclude Include="systems\shadow_render_system.hpp" />
     <ClInclude Include="systems\simple_render_system.hpp" />
     <ClInclude Include="vk_mem_alloc.h" />
   </ItemGroup>
@@ -200,6 +202,8 @@
     <None Include="shaders\gbuffer_shader.vert" />
     <None Include="shaders\point_light.frag" />
     <None Include="shaders\point_light.vert" />
+    <None Include="shaders\shadow_shader.frag" />
+    <None Include="shaders\shadow_shader.vert" />
     <None Include="shaders\simple_shader.frag" />
     <None Include="shaders\simple_shader.vert" />
   </ItemGroup>

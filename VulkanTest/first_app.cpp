@@ -2,6 +2,7 @@
 
 #include "keyboard_movement_controller.hpp"
 #include "lve_camera.hpp"
+#include "systems/shadow_render_system.hpp"
 #include "systems/simple_render_system.hpp"
 #include "systems/point_light_system.hpp"
 
@@ -30,16 +31,39 @@ namespace lve {
 	}
 
 	void FirstApp::run() {
+		ShadowRenderSystem shadowRenderSystem{ lveDevice, lveRenderer.getShadowRenderPass() };
 		SimpleRenderSystem simpleRenderSystem{lveDevice, lveRenderer.getSwapChainRenderPass(), lveRenderer.getGBufferDescriptorSetLayout(), lveRenderer.getCompositionDescriptorSetLayout() };
 		PointLightSystem pointLightSystem{ lveDevice, lveRenderer.getSwapChainRenderPass(), lveRenderer.getGBufferDescriptorSetLayout(), lveRenderer.getCompositionDescriptorSetLayout() };
 		LveCamera camera{};
+		LveCamera light{};
 
 		auto viewerObject = LveGameObject::createGameObject();
-		viewerObject.transform.translation.z = -2.5f;
+
+		auto lightObject = LveGameObject::createGameObject();
 
 		KeyboardMovementController cameraController{};
 
 		auto currentTime = std::chrono::high_resolution_clock::now();
+
+		// update
+		LveSwapChain::GBufferUbo gBufferUbo{};
+		LveSwapChain::CompositionUbo compositionUbo{};
+
+		viewerObject.transform.translation = compositionUbo.lightPosition;
+		viewerObject.transform.rotation.x = -.9f;
+		viewerObject.transform.rotation.y = 0.75f;
+		
+		lightObject.transform.translation = compositionUbo.lightPosition;
+		lightObject.transform.rotation.x = -.9f;
+		lightObject.transform.rotation.y = 0.75f;
+
+		light.setViewYXZ(lightObject.transform.translation, lightObject.transform.rotation);
+		float aspect = lveRenderer.getShadowAspectRatio();
+		light.setPerspectiveProjection(glm::radians(60.0f), aspect, 0.1f, 24.0f);
+
+		glm::mat4 lightProjView = light.getProjection() * light.getView();
+
+		gBufferUbo.lightProjectionView = lightProjView;
 
 		while (!lveWindow.shouldClose()) {
 			glfwPollEvents();
@@ -55,7 +79,7 @@ namespace lve {
 			camera.setViewYXZ(viewerObject.transform.translation, viewerObject.transform.rotation);
 
 			float aspect = lveRenderer.getAspectRatio();
-			camera.setPerspectiveProjection(glm::radians(50.0f), aspect, 0.1f, 10.f);
+			camera.setPerspectiveProjection(glm::radians(50.0f), aspect, 0.1f, 50.0f);
 
 			if (auto commandBuffer = lveRenderer.beginFrame()) {
 				int frameIndex = lveRenderer.getFrameIndex();
@@ -69,27 +93,22 @@ namespace lve {
 					lveRenderer.getCurrentCompositionDescriptorSet(),
 					gameObjects
 				};
-				// update
-				LveSwapChain::GBufferUbo gBufferUbo{};
+				
 				gBufferUbo.projection = camera.getProjection();
 				gBufferUbo.view = camera.getView();
-				
-				/*
-				lveRenderer.getCurrentGBufferUbo().writeToBuffer(&gBufferUbo);
-				lveRenderer.getCurrentGBufferUbo().flush();
-				*/
+
 				lveRenderer.updateCurrentGBufferUbo(&gBufferUbo);
 
-				LveSwapChain::CompositionUbo compositionUbo{};
 				compositionUbo.viewPos = viewerObject.transform.translation;
 
 				lveRenderer.updateCurrentCompositionUbo(&compositionUbo);
-				/*
-				lveRenderer.getCurrentCompositionUbo().writeToBuffer(&compositionUbo);
-				lveRenderer.getCurrentCompositionUbo().flush();
-				*/
 
-				// render
+				// render shadows
+				lveRenderer.beginShadowRenderPass(commandBuffer);
+				shadowRenderSystem.renderGameObjects(frameInfo, lightProjView);
+				lveRenderer.endShadowRenderPass(commandBuffer);
+
+				// render swap chain
 				lveRenderer.beginSwapChainRenderPass(commandBuffer);
 				VkExtent2D extent = lveRenderer.getExtent();
 				simpleRenderSystem.renderGameObjects(frameInfo, glm::inverse(camera.getProjection() * camera.getView()), glm::vec2(1.f/extent.width, 1.f/extent.height));
@@ -102,37 +121,68 @@ namespace lve {
 	}
 
 	void FirstApp::loadGameObjects() {
-		std::shared_ptr<LveModel> flatVaseModel = LveModel::createModelFromFile(lveDevice, "models/flat_vase.obj", lveAllocator);
-		gameModels.push_back(std::move(flatVaseModel));
-		auto flatVase = LveGameObject::createGameObject();
-		flatVase.model = gameModels.back();
-		flatVase.transform.translation = { -.5f, .5f, 0.f};
-		flatVase.transform.scale = glm::vec3(3.f, 1.5f, 3.f);
-		gameObjects.emplace(flatVase.getId(), std::move(flatVase));
-
-		std::shared_ptr<LveModel> smoothVaseModel = LveModel::createModelFromFile(lveDevice, "models/smooth_vase.obj", lveAllocator);
-		gameModels.push_back(std::move(smoothVaseModel));
-		auto smoothVase = LveGameObject::createGameObject();
-		smoothVase.model = gameModels.back();
-		smoothVase.transform.translation = { .5f, .5f, 0.f };
-		smoothVase.transform.scale = glm::vec3(3.f, 1.5f, 3.f);
-		gameObjects.emplace(smoothVase.getId(), std::move(smoothVase));
 
 		std::shared_ptr<LveModel> quadModel = LveModel::createModelFromFile(lveDevice, "models/quad.obj", lveAllocator);
 		gameModels.push_back(std::move(quadModel));
 		auto floor = LveGameObject::createGameObject();
 		floor.model = gameModels.back();
-		floor.transform.translation = {0.f, .5f, 0.f };
-		floor.transform.scale = glm::vec3(3.f, 1.f, 3.f);
+		floor.transform.translation = {0.f, 0.f, 0.f };
+		floor.transform.scale = glm::vec3(12.f, 1.f, 12.f);
 		gameObjects.emplace(floor.getId(), std::move(floor));
+
+		auto right = LveGameObject::createGameObject();
+		right.model = gameModels.back();
+		right.transform.translation = { 12.f, -12.f, 0.f };
+		right.transform.scale = glm::vec3(12.f, 1.f, 12.f);
+		right.transform.rotation = glm::vec3(0.f, 0.f, glm::radians(90.0f));
+		gameObjects.emplace(right.getId(), std::move(right));
+
+		auto front = LveGameObject::createGameObject();
+		front.model = gameModels.back();
+		front.transform.translation = { 0.f, -12.f, 12.f };
+		front.transform.scale = glm::vec3(12.f, 1.f, 12.f);
+		front.transform.rotation = glm::vec3(glm::radians(90.0f), 0.f, 0.f);
+		gameObjects.emplace(front.getId(), std::move(front));
+
+		auto left = LveGameObject::createGameObject();
+		left.model = gameModels.back();
+		left.transform.translation = { -12.f, -12.f, 0.f };
+		left.transform.scale = glm::vec3(12.f, 1.f, 12.f);
+		left.transform.rotation = glm::vec3(0.f, 0.f, glm::radians(90.0f));
+		gameObjects.emplace(left.getId(), std::move(left));
+
+		auto back = LveGameObject::createGameObject();
+		back.model = gameModels.back();
+		back.transform.translation = { 0.f, -12.f, -12.f };
+		back.transform.scale = glm::vec3(12.f, 1.f, 12.f);
+		back.transform.rotation = glm::vec3(glm::radians(90.0f), 0.f, 0.f);
+		gameObjects.emplace(back.getId(), std::move(back));
+
+		auto top = LveGameObject::createGameObject();
+		top.model = gameModels.back();
+		top.transform.translation = { 0.f, -12.f, 0.f };
+		top.transform.scale = glm::vec3(12.f, 1.f, 12.f);
+		gameObjects.emplace(top.getId(), std::move(top));
 
 		std::shared_ptr<LveModel> coloredCubeModel = LveModel::createModelFromFile(lveDevice, "models/colored_cube.obj", lveAllocator);
 		gameModels.push_back(std::move(coloredCubeModel));
 		auto coloredCube = LveGameObject::createGameObject();
 		coloredCube.model = gameModels.back();
-		coloredCube.transform.translation = { 0.f, 0.f, 1.f };
-		coloredCube.transform.scale = glm::vec3(0.5f, 0.5f, 0.5f);
+		coloredCube.transform.translation = { 1.f, -1.f, 1.f };
+		coloredCube.transform.scale = glm::vec3(0.5f, 1.f, 0.5f);
 		gameObjects.emplace(coloredCube.getId(), std::move(coloredCube));
+
+		auto coloredCube2 = LveGameObject::createGameObject();
+		coloredCube2.model = gameModels.back();
+		coloredCube2.transform.translation = { -.5f, -1.f, 2.f };
+		coloredCube2.transform.scale = glm::vec3(0.5f, 1.f, 0.5f);
+		gameObjects.emplace(coloredCube2.getId(), std::move(coloredCube2));
+
+		auto coloredCube3 = LveGameObject::createGameObject();
+		coloredCube3.model = gameModels.back();
+		coloredCube3.transform.translation = { .5f, -1.f, 3.f };
+		coloredCube3.transform.scale = glm::vec3(0.5f, 1.f, 0.5f);
+		gameObjects.emplace(coloredCube3.getId(), std::move(coloredCube3));
 
 
 	}

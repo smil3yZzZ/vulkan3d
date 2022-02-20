@@ -26,8 +26,8 @@ LveSwapChain::LveSwapChain(LveDevice& deviceRef, LveAllocator& allocatorRef, VkE
 void LveSwapChain::init() {
     createSwapChain();
     createSwapChainImageViews();
+    createShadowSampler();
     createDeferredResources();
-    //createSampler();
     createShadowRenderPass();
     createCompositionRenderPass();
     createShadowFramebuffers();
@@ -52,15 +52,26 @@ LveSwapChain::~LveSwapChain() {
       destroyAttachment(&attachments.normal);
       destroyAttachment(&attachments.albedo);
       destroyAttachment(&attachments.depth);
+      destroyAttachment(&attachments.lightSpace);
   }
   attachmentsVector.clear();
+
+  for (auto& samplers : samplersVector) {
+      destroySampler(&samplers.shadowDepth);
+  }
+  samplersVector.clear();
   
 
   for (auto framebuffer : swapChainFramebuffers) {
     vkDestroyFramebuffer(device.device(), framebuffer, nullptr);
   }
 
+  for (auto framebuffer : shadowFramebuffers) {
+      vkDestroyFramebuffer(device.device(), framebuffer, nullptr);
+  }
+
   vkDestroyRenderPass(device.device(), renderPass, nullptr);
+  vkDestroyRenderPass(device.device(), shadowRenderPass, nullptr);
 
   // cleanup synchronization objects
   for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -221,7 +232,7 @@ void LveSwapChain::createSwapChainImageViews() {
 }
 
 void LveSwapChain::createCompositionRenderPass() {
-  std::array<VkAttachmentDescription, 4> attachments {};
+  std::array<VkAttachmentDescription, 5> attachments {};
 
   // Color attachment (swap chain)
   attachments[0].format = getSwapChainImageFormat();
@@ -252,15 +263,24 @@ void LveSwapChain::createCompositionRenderPass() {
   attachments[2].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
   attachments[2].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   attachments[2].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-  // Depth attachment
-  attachments[3].format = findDepthFormat();
+  // Light Space position
+  attachments[3].format = deferredResourcesFormat;
   attachments[3].samples = VK_SAMPLE_COUNT_1_BIT;
   attachments[3].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
   attachments[3].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
   attachments[3].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
   attachments[3].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
   attachments[3].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  attachments[3].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+  attachments[3].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+  // Depth attachment
+  attachments[4].format = findDepthFormat();
+  attachments[4].samples = VK_SAMPLE_COUNT_1_BIT;
+  attachments[4].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+  attachments[4].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  attachments[4].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  attachments[4].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  attachments[4].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  attachments[4].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
   // Two subpasses
   std::array<VkSubpassDescription, 2> subpassDescriptions{};
@@ -268,13 +288,14 @@ void LveSwapChain::createCompositionRenderPass() {
   // First subpass: Fill G-Buffer components
   // ----------------------------------------------------------------------------------------
 
-  VkAttachmentReference colorReferences[2];
+  VkAttachmentReference colorReferences[3];
   colorReferences[0] = { 1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
   colorReferences[1] = { 2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-  VkAttachmentReference depthReference = { 3, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+  colorReferences[2] = { 3, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+  VkAttachmentReference depthReference = { 4, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
   subpassDescriptions[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-  subpassDescriptions[0].colorAttachmentCount = 2;
+  subpassDescriptions[0].colorAttachmentCount = 3;
   subpassDescriptions[0].pColorAttachments = colorReferences;
   subpassDescriptions[0].pDepthStencilAttachment = &depthReference;
 
@@ -283,15 +304,16 @@ void LveSwapChain::createCompositionRenderPass() {
 
   VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 
-  VkAttachmentReference inputReferences[3];
+  VkAttachmentReference inputReferences[4];
   inputReferences[0] = { 1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
   inputReferences[1] = { 2, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
   inputReferences[2] = { 3, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+  inputReferences[3] = { 4, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 
   subpassDescriptions[1].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
   subpassDescriptions[1].colorAttachmentCount = 1;
   subpassDescriptions[1].pColorAttachments = &colorReference;
-  subpassDescriptions[1].inputAttachmentCount = 3;
+  subpassDescriptions[1].inputAttachmentCount = 4;
   subpassDescriptions[1].pInputAttachments = inputReferences;
 
 
@@ -340,7 +362,7 @@ void LveSwapChain::createCompositionRenderPass() {
 void LveSwapChain::createCompositionFramebuffers() {
   swapChainFramebuffers.resize(imageCount());
   for (size_t i = 0; i < imageCount(); i++) {
-    std::array<VkImageView, 4> attachments = { swapChainImageViews[i], this->attachmentsVector[i].normal.view, this->attachmentsVector[i].albedo.view, this->attachmentsVector[i].depth.view };
+    std::array<VkImageView, 5> attachments = { swapChainImageViews[i], this->attachmentsVector[i].normal.view, this->attachmentsVector[i].albedo.view, this->attachmentsVector[i].lightSpace.view, this->attachmentsVector[i].depth.view };
 
     VkExtent2D swapChainExtent = getSwapChainExtent();
     VkFramebufferCreateInfo framebufferInfo = {};
@@ -369,13 +391,37 @@ void LveSwapChain::createDeferredResources() {
     attachmentsVector.resize(imageCount());
 
     for (auto& attachments : attachmentsVector) {
-        createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, &attachments.normal, swapChainExtent);
-        createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, &attachments.albedo, swapChainExtent);
-        createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &attachments.depth, swapChainExtent);
+        createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.normal, swapChainExtent);
+        createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.albedo, swapChainExtent);
+        createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.lightSpace, swapChainExtent);
+        createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.depth, swapChainExtent);
     }   
 }
 
-void LveSwapChain::createAttachment(VkFormat format, VkImageUsageFlags usage, FrameBufferAttachment* attachment, VkExtent2D swapChainExtent) {
+void LveSwapChain::createSampler(VkFormat format, VkImageUsageFlags usage, Sampler* sampler, VkExtent2D extent) {
+    VkFilter shadowMapFilter = formatIsFilterable(device.getPhysicalDevice(), format, VK_IMAGE_TILING_OPTIMAL) ?
+        DEFAULT_SHADOWMAP_FILTER :
+        VK_FILTER_NEAREST;
+    VkSamplerCreateInfo samplerCreateInfo{};
+    samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerCreateInfo.magFilter = shadowMapFilter;
+    samplerCreateInfo.minFilter = shadowMapFilter;
+    samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerCreateInfo.addressModeV = samplerCreateInfo.addressModeU;
+    samplerCreateInfo.addressModeW = samplerCreateInfo.addressModeU;
+    samplerCreateInfo.mipLodBias = 0.0f;
+    samplerCreateInfo.anisotropyEnable = false;
+    samplerCreateInfo.minLod = 0.0f;
+    samplerCreateInfo.maxLod = 1.0f;
+    samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    if (vkCreateSampler(device.device(), &samplerCreateInfo, nullptr, &sampler->sampler) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create shadow depth sampler!");
+    }
+    createAttachment(format, usage, &sampler->attachment, extent);
+}
+
+void LveSwapChain::createAttachment(VkFormat format, VkImageUsageFlags usage, FrameBufferAttachment* attachment, VkExtent2D extent) {
     attachment->format = format;
 
     VkImageAspectFlags imageAspectFlags;
@@ -390,15 +436,15 @@ void LveSwapChain::createAttachment(VkFormat format, VkImageUsageFlags usage, Fr
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageInfo.extent.width = swapChainExtent.width;
-    imageInfo.extent.height = swapChainExtent.height;
+    imageInfo.extent.width = extent.width;
+    imageInfo.extent.height = extent.height;
     imageInfo.extent.depth = 1;
     imageInfo.mipLevels = 1;
     imageInfo.arrayLayers = 1;
     imageInfo.format = attachment->format;
     imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageInfo.usage = usage | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+    imageInfo.usage = usage;
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imageInfo.flags = 0;
@@ -518,27 +564,109 @@ VkDescriptorImageInfo LveSwapChain::FrameBufferAttachment::descriptorInfo(VkSamp
     };
 }
 
-void LveSwapChain::createSampler(VkFormat format, VkImageUsageFlags usage, FrameBufferAttachment* attachment, VkExtent2D swapChainExtent) {
+void LveSwapChain::createShadowSampler() {
+    VkExtent2D shadowMapExtent = getShadowMapExtent();
 
+    samplersVector.resize(imageCount());
+
+    for (auto& samplers : samplersVector) {
+        createSampler(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &samplers.shadowDepth, shadowMapExtent);
+    }
 }
 
 void LveSwapChain::createShadowRenderPass() {
+    std::array<VkAttachmentDescription, 1> attachments{};
 
+    // Depth attachment (shadow)
+    attachments[0].format = findDepthFormat();
+    attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[0].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    attachments[0].flags = 0;
+
+    // One subpass
+    std::array<VkSubpassDescription, 1> subpassDescriptions{};
+
+    VkAttachmentReference depthReference = { 0, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+
+    subpassDescriptions[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpassDescriptions[0].colorAttachmentCount = 0;
+    subpassDescriptions[0].pColorAttachments = nullptr;
+    subpassDescriptions[0].pDepthStencilAttachment = &depthReference;
+
+    // Subpass dependencies for layout transitions
+    std::array<VkSubpassDependency, 2> dependencies;
+
+    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass = 0;
+    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependencies[0].srcAccessMask = 0;
+    dependencies[0].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    dependencies[1].srcSubpass = 0;
+    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    dependencies[1].srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    VkRenderPassCreateInfo renderPassInfo = {};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    renderPassInfo.pAttachments = attachments.data();
+    renderPassInfo.subpassCount = subpassDescriptions.size();
+    renderPassInfo.pSubpasses = subpassDescriptions.data();
+    renderPassInfo.dependencyCount = dependencies.size();
+    renderPassInfo.pDependencies = dependencies.data();
+
+    if (vkCreateRenderPass(device.device(), &renderPassInfo, nullptr, &shadowRenderPass) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create render pass!");
+    }
 }
 
 void LveSwapChain::createShadowFramebuffers() {
+    shadowFramebuffers.resize(imageCount());
+    VkExtent2D shadowMapExtent = getShadowMapExtent();
+    for (size_t i = 0; i < imageCount(); i++) {
+        std::array<VkImageView, 1> attachments = {samplersVector[i].shadowDepth.attachment.view};
 
+        VkFramebufferCreateInfo framebufferInfo = {};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = shadowRenderPass;
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebufferInfo.pAttachments = attachments.data();
+        framebufferInfo.width = shadowMapExtent.width;
+        framebufferInfo.height = shadowMapExtent.height;
+        framebufferInfo.layers = 1;
+
+        if (vkCreateFramebuffer(
+            device.device(),
+            &framebufferInfo,
+            nullptr,
+            &shadowFramebuffers[i]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create framebuffer!");
+        }
+    }
 }
 
 void LveSwapChain::destroySampler(Sampler* sampler) {
-
+    destroyAttachment(&sampler->attachment);
+    vkDestroySampler(device.device(), sampler->sampler, nullptr);
 }
 
 void LveSwapChain::createDescriptorPool() {
     globalPool = LveDescriptorPool::Builder(device)
         .setMaxSets(2 * imageCount())
         .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2 * imageCount())
-        .addPoolSize(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 3 * imageCount())
+        .addPoolSize(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 4 * imageCount())
+        .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, imageCount())
         .build();
 }
 
@@ -588,22 +716,28 @@ void LveSwapChain::createUniformBuffers() {
         .addBinding(0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
         .addBinding(1, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
         .addBinding(2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
-        .addBinding(3, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+        .addBinding(3, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
+        .addBinding(4, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+        .addBinding(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
         .build();
 
     compositionDescriptorSets.clear();
     compositionDescriptorSets.resize(imageCount());
 
     for (int i = 0; i < compositionDescriptorSets.size(); i++) {
-        auto bufferInfo = compositionUboBuffers[i]->descriptorInfo();
         auto normalInfo = attachmentsVector[i].normal.descriptorInfo();
         auto albedoInfo = attachmentsVector[i].albedo.descriptorInfo();
+        auto lightSpaceInfo = attachmentsVector[i].lightSpace.descriptorInfo();
         auto depthInfo = attachmentsVector[i].depth.descriptorInfo();
+        auto bufferInfo = compositionUboBuffers[i]->descriptorInfo();
+        auto shadowDepthInfo = samplersVector[i].shadowDepth.attachment.descriptorInfo(samplersVector[i].shadowDepth.sampler);
         LveDescriptorWriter(*compositionSetLayout, *globalPool)
             .writeImage(0, &normalInfo)
             .writeImage(1, &albedoInfo)
-            .writeImage(2, &depthInfo)
-            .writeBuffer(3, &bufferInfo)
+            .writeImage(2, &lightSpaceInfo)
+            .writeImage(3, &depthInfo)
+            .writeBuffer(4, &bufferInfo)
+            .writeImage(5, &shadowDepthInfo)
             .build(compositionDescriptorSets[i]);
     }
 }
@@ -615,6 +749,21 @@ void LveSwapChain::updateCurrentGBufferUbo(void* data, int currentImageIndex) {
 void LveSwapChain::updateCurrentCompositionUbo(void* data, int currentImageIndex) {
     compositionUboBuffers[currentImageIndex]->writeToBuffer(data);
     compositionUboBuffers[currentImageIndex]->flush();
+}
+
+// Returns if a given format support LINEAR filtering
+VkBool32 LveSwapChain::formatIsFilterable(VkPhysicalDevice physicalDevice, VkFormat format, VkImageTiling tiling)
+{
+    VkFormatProperties formatProps;
+    vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &formatProps);
+
+    if (tiling == VK_IMAGE_TILING_OPTIMAL)
+        return formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+
+    if (tiling == VK_IMAGE_TILING_LINEAR)
+        return formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+
+    return false;
 }
 
 }  // namespace lve

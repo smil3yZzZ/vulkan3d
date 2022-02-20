@@ -20,7 +20,9 @@ namespace lve {
 		LveRenderer& operator=(const LveRenderer&) = delete;
 
 		VkRenderPass getSwapChainRenderPass() const { return lveSwapChain->getRenderPass(); }
+		VkRenderPass getShadowRenderPass() const { return lveSwapChain->getShadowRenderPass(); }
 		float getAspectRatio() const { return lveSwapChain->extentAspectRatio(); };
+		float getShadowAspectRatio() const { return lveSwapChain->shadowExtentAspectRatio(); };
 		VkExtent2D getExtent() const { return lveSwapChain->getSwapChainExtent(); };
 		std::vector<LveSwapChain::Attachments> getSwapChainAttachments() { return lveSwapChain->getAttachments(); };
 		bool isFrameInProgress() const { return isFrameStarted; }
@@ -40,6 +42,8 @@ namespace lve {
 
 		VkCommandBuffer beginFrame();
 		void endFrame();
+		void beginShadowRenderPass(VkCommandBuffer commandBuffer);
+		void endShadowRenderPass(VkCommandBuffer commandBuffer);
 		void beginSwapChainRenderPass(VkCommandBuffer commandBuffer);
 		void endSwapChainRenderPass(VkCommandBuffer commandBuffer);
 

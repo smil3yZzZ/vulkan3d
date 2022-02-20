@@ -14,9 +14,10 @@ layout (location = 0) out vec2 fragOffset;
 layout(set = 0, binding = 0) uniform GBufferUbo {
 	mat4 projection;
 	mat4 view;
+	mat4 lightProjectionView;
 } gBufferUbo;
 
-layout(set = 1, binding = 3) uniform CompositionUbo {
+layout(set = 1, binding = 4) uniform CompositionUbo {
 	vec3 viewPos;
 	vec4 ambientLightColor; //w is intensity
 	vec3 lightPosition;

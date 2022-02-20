@@ -60,7 +60,7 @@ namespace lve {
 	void SimpleRenderSystem::createGBufferPipeline(VkRenderPass renderPass) {
 		assert(gBufferPipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
 		PipelineConfigInfo pipelineConfig{};
-		pipelineConfig.attachmentCount = 2;
+		pipelineConfig.attachmentCount = 3;
 		pipelineConfig.hasVertexBufferBound = true;
 		LvePipeline::defaultPipelineConfigInfo(pipelineConfig);
 		pipelineConfig.renderPass = renderPass;
@@ -126,8 +126,6 @@ namespace lve {
 
 		for (auto& kv : frameInfo.gameObjects) {
 			auto& obj = kv.second;
-			//obj.transform.rotation.y = glm::mod(obj.transform.rotation.y + 0.01f, glm::two_pi<float>());
-			//obj.transform.rotation.x = glm::mod(obj.transform.rotation.y + 0.001f, glm::two_pi<float>());
 
 			GBufferPushConstantData push{};
 

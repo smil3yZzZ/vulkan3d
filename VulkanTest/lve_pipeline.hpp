@@ -39,6 +39,7 @@ namespace lve {
 
 			void bind(VkCommandBuffer commandBuffer);
 			static void defaultPipelineConfigInfo(PipelineConfigInfo& configInfo);
+			static void shadowPipelineConfigInfo(PipelineConfigInfo& configInfo);
 
 	private:
 		static std::vector<char> readFile(const std::string& filepath);
