@@ -23,16 +23,15 @@ namespace lve {
 class LveSwapChain {
 
  public:
-     /*
-     struct GBufferUbo {
-         glm::mat4 projection{ 1.f };
-         glm::mat4 view{ 1.f };
+     
+     struct ShadowUbo {
+         float lightFarPlane;
+         glm::vec3 lightPosition{ -2.f, -5.f, -1.f };
      };
-     */
+
      struct GBufferUbo {
          glm::mat4 projection{ 1.f };
          glm::mat4 view{ 1.f };
-         glm::mat4 lightProjectionView{ 1.f };
      };
 
      struct CompositionUbo {
@@ -40,12 +39,11 @@ class LveSwapChain {
          alignas(16) glm::vec4 ambientLightColor{ 1.f, 1.f, 1.f, .15f }; //w is intensity
          glm::vec3 lightPosition{ -2.f, -5.f, -1.f };
          alignas(16) glm::vec4 lightColor{ .8f, 1.f, .2f, 1.f }; // w is light intensity
-         //glm::mat4 lightProjView{ 1.f };
      };
 
     struct FrameBufferAttachment {
         VkImage image = VK_NULL_HANDLE;
-        VkDeviceMemory memory = VK_NULL_HANDLE;
+        VmaAllocation memory = VK_NULL_HANDLE;
         VkImageView view = VK_NULL_HANDLE;
         VkFormat format;
         VkDescriptorImageInfo descriptorInfo(VkSampler sampler = VK_NULL_HANDLE, VkImageLayout imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -61,11 +59,11 @@ class LveSwapChain {
     };
 
     struct Samplers {
-        Sampler shadowDepth;
+        Sampler shadowCubeMap;
     };
 
     struct Attachments {
-        FrameBufferAttachment normal, albedo, lightSpace, depth;
+        FrameBufferAttachment normal, albedo, depth, shadowColor, shadowDepth;
     };
 
   static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
@@ -74,6 +72,8 @@ class LveSwapChain {
   static constexpr int SHADOW_MAP_HEIGHT = 2048;
 
   static constexpr VkFilter DEFAULT_SHADOWMAP_FILTER = VK_FILTER_LINEAR;
+  static constexpr VkFormat SHADOW_FB_COLOR_FORMAT = VK_FORMAT_R32_SFLOAT;
+  static constexpr VkFormat SHADOW_FB_DEPTH_STENCIL_FORMAT = VK_FORMAT_D32_SFLOAT_S8_UINT;
 
   LveSwapChain(LveDevice &deviceRef, LveAllocator& allocatorRef, VkExtent2D windowExtent);
   LveSwapChain(LveDevice& deviceRef, LveAllocator& allocatorRef, VkExtent2D windowExtent, std::shared_ptr<LveSwapChain> previous);
@@ -92,7 +92,8 @@ class LveSwapChain {
   VkExtent2D getSwapChainExtent() { return swapChainExtent; }
   uint32_t width() { return swapChainExtent.width; }
   uint32_t height() { return swapChainExtent.height; }
-  std::vector<Attachments> getAttachments() { return attachmentsVector; }
+  Attachments getAttachments(int currentImageIndex) { return attachmentsVector[currentImageIndex]; }
+  Samplers getSamplers(int currentImageIndex) { return samplersVector[currentImageIndex]; }
   VkExtent2D getShadowMapExtent() { return VkExtent2D{SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT}; }
 
   float extentAspectRatio() {
@@ -113,10 +114,13 @@ class LveSwapChain {
 
   size_t getCurrentFrame() { return currentFrame; }
 
+  VkDescriptorSetLayout getShadowDescriptorSetLayout() { return shadowSetLayout->getDescriptorSetLayout(); };
   VkDescriptorSetLayout getGBufferDescriptorSetLayout() { return gBufferSetLayout->getDescriptorSetLayout(); };
   VkDescriptorSetLayout getCompositionDescriptorSetLayout() { return compositionSetLayout->getDescriptorSetLayout(); };
+  VkDescriptorSet getCurrentShadowDescriptorSet(int currentImageIndex) { return shadowDescriptorSets[currentImageIndex]; };
   VkDescriptorSet getCurrentGBufferDescriptorSet(int currentImageIndex) { return gBufferDescriptorSets[currentImageIndex]; };
   VkDescriptorSet getCurrentCompositionDescriptorSet(int currentImageIndex) { return compositionDescriptorSets[currentImageIndex]; };
+  void updateCurrentShadowUbo(void* data, int currentImageIndex);
   void updateCurrentGBufferUbo(void* data, int currentImageIndex);
   void updateCurrentCompositionUbo(void* data, int currentImageIndex);
 
@@ -125,7 +129,7 @@ class LveSwapChain {
   void createSwapChain();
   void createSwapChainImageViews();
   void createDeferredResources();
-  void createSampler(VkFormat format, VkImageUsageFlags usage, Sampler* attachment, VkExtent2D extent);
+  void createCubeSampler(VkFormat format, VkImageUsageFlags usage, Sampler* attachment, VkExtent2D extent);
   void createAttachment(VkFormat format, VkImageUsageFlags usage, FrameBufferAttachment* attachment, VkExtent2D extent);
   void createShadowSampler();
   void createCompositionRenderPass();
@@ -177,11 +181,14 @@ class LveSwapChain {
 
   std::unique_ptr<LveDescriptorSetLayout> gBufferSetLayout;
   std::unique_ptr<LveDescriptorSetLayout> compositionSetLayout;
+  std::unique_ptr<LveDescriptorSetLayout> shadowSetLayout;
   std::unique_ptr<LveDescriptorPool> globalPool;
   std::vector<std::unique_ptr<LveBuffer>> gBufferUboBuffers;
   std::vector<std::unique_ptr<LveBuffer>> compositionUboBuffers;
+  std::vector<std::unique_ptr<LveBuffer>> shadowUboBuffers;
   std::vector<VkDescriptorSet> gBufferDescriptorSets;
   std::vector<VkDescriptorSet> compositionDescriptorSets;
+  std::vector<VkDescriptorSet> shadowDescriptorSets;
 };
 
 }  // namespace lve

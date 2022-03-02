@@ -3,7 +3,7 @@
 layout (location = 0) in vec2 fragOffset;
 layout (location = 0) out vec4 outColor;
 
-layout(set = 1, binding = 4) uniform CompositionUbo {
+layout(set = 1, binding = 3) uniform CompositionUbo {
 	vec3 viewPos;
 	vec4 ambientLightColor; //w is intensity
 	vec3 lightPosition;

@@ -2,13 +2,12 @@
 
 layout (input_attachment_index = 0, binding = 0) uniform subpassInput samplerNormal;
 layout (input_attachment_index = 1, binding = 1) uniform subpassInput samplerAlbedo;
-layout (input_attachment_index = 2, binding = 2) uniform subpassInput samplerLightSpacePosition;
-layout (input_attachment_index = 3, binding = 3) uniform subpassInput samplerPositionDepth;
-layout (binding = 5) uniform sampler2D samplerShadowDepth;
+layout (input_attachment_index = 2, binding = 2) uniform subpassInput samplerPositionDepth;
+layout (binding = 4) uniform samplerCube samplerShadowCube;
 
 layout (location = 0) out vec4 outColor;
 
-layout(set = 0, binding = 4) uniform CompositionUbo {
+layout(set = 0, binding = 3) uniform CompositionUbo {
 	vec3 viewPos;
 	vec4 ambientLightColor; //w is intensity
 	vec3 lightPosition;
@@ -20,9 +19,10 @@ layout(push_constant) uniform Push {
 	vec2 invResolution;
 } push;
 
-const float specularStrength = 0.5;
-const float shininess = 1;
+const float specularStrength = 1;
+const float shininess = 16;
 
+/*
 float shadowCalculation(vec3 lightProjCoords)
 {
 	// If the fragment is outside the light's projection then it is outside
@@ -45,6 +45,7 @@ float shadowCalculation(vec3 lightProjCoords)
 
     return shadow;
 }  
+*/
 
 void main() {
 	// Read previous pass shadow depth & G-Buffer values from previous sub pass
@@ -56,9 +57,9 @@ void main() {
 	vec3 fragPosWorld = fragPosWorld_w.xyz / fragPosWorld_w.w;
 
 	//vec4 fragPosLight_w = ubo.lightProjView * fragPosWorld_w;
-	vec4 fragPosLight_w = subpassLoad(samplerLightSpacePosition);
-	vec3 fragPosLight = fragPosLight_w.xyz / fragPosLight_w.w;
-	float shadow = shadowCalculation(fragPosLight);
+	//vec4 fragPosLight_w = subpassLoad(samplerLightSpacePosition);
+	//vec3 fragPosLight = fragPosLight_w.xyz / fragPosLight_w.w;
+	//float shadow = shadowCalculation(fragPosLight);
 
 	vec3 normal = subpassLoad(samplerNormal).xyz;
 	vec4 fragColor = subpassLoad(samplerAlbedo);
@@ -78,5 +79,5 @@ void main() {
 	float spec = pow(max(dot(normal, halfwayDirection), 0.0), shininess);
 	vec3 specularLight = specularStrength * spec * lightColor;
 	
-	outColor = vec4((diffuseLight + (1.0 - shadow) * ambientLight + specularLight) * fragColor.xyz, fragColor.a);
+	outColor = vec4((diffuseLight + ambientLight + specularLight) * fragColor.xyz, fragColor.a);
 }

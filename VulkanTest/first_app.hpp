@@ -18,6 +18,13 @@ namespace lve {
 		static constexpr int HEIGHT = 600;
 		static constexpr int NUMBER_OF_TRIANGLE_VERTICES = 3;
 
+		static constexpr float CAMERA_NEAR = 0.1f;
+		static constexpr float CAMERA_FAR = 50.0f;
+
+		static constexpr float LIGHT_NEAR = 0.1f;
+		static constexpr float LIGHT_FAR = 24.0f;
+
+
 		static constexpr float MIN_SECONDS_PER_FRAME = 1.f/60.f;
 
 		FirstApp();

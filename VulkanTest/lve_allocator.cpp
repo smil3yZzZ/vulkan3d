@@ -51,4 +51,21 @@ namespace lve {
 		vmaDestroyBuffer(allocator, buffer, constantBufferAllocation);
 	}
 
+	void LveAllocator::createImage(VkImageCreateInfo* imageInfo,
+		VmaMemoryUsage memoryUsage,
+		VkMemoryPropertyFlags properties,
+		VkImage& image,
+		VmaAllocation& constantImageAllocation) {
+
+		VmaAllocationCreateInfo allocInfo = {};
+		allocInfo.usage = memoryUsage;
+		allocInfo.requiredFlags = properties;
+
+		vmaCreateImage(this->allocator, imageInfo, &allocInfo, &image, &constantImageAllocation, nullptr);
+	}
+
+	void LveAllocator::destroyImage(VkImage& image, VmaAllocation& constantImageAllocation) {
+		vmaDestroyImage(allocator, image, constantImageAllocation);
+	}
+
 }

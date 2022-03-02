@@ -31,7 +31,7 @@ namespace lve {
 	}
 
 	void FirstApp::run() {
-		ShadowRenderSystem shadowRenderSystem{ lveDevice, lveRenderer.getShadowRenderPass() };
+		ShadowRenderSystem shadowRenderSystem{ lveDevice, lveRenderer.getShadowRenderPass(),  lveRenderer.getShadowDescriptorSetLayout() };
 		SimpleRenderSystem simpleRenderSystem{lveDevice, lveRenderer.getSwapChainRenderPass(), lveRenderer.getGBufferDescriptorSetLayout(), lveRenderer.getCompositionDescriptorSetLayout() };
 		PointLightSystem pointLightSystem{ lveDevice, lveRenderer.getSwapChainRenderPass(), lveRenderer.getGBufferDescriptorSetLayout(), lveRenderer.getCompositionDescriptorSetLayout() };
 		LveCamera camera{};
@@ -48,6 +48,7 @@ namespace lve {
 		// update
 		LveSwapChain::GBufferUbo gBufferUbo{};
 		LveSwapChain::CompositionUbo compositionUbo{};
+		LveSwapChain::ShadowUbo shadowUbo{};
 
 		viewerObject.transform.translation = compositionUbo.lightPosition;
 		viewerObject.transform.rotation.x = -.9f;
@@ -59,11 +60,12 @@ namespace lve {
 
 		light.setViewYXZ(lightObject.transform.translation, lightObject.transform.rotation);
 		float aspect = lveRenderer.getShadowAspectRatio();
-		light.setPerspectiveProjection(glm::radians(60.0f), aspect, 0.1f, 24.0f);
+		light.setPerspectiveProjection(glm::radians(45.0f), aspect, LIGHT_NEAR, LIGHT_FAR);
 
 		glm::mat4 lightProjView = light.getProjection() * light.getView();
 
-		gBufferUbo.lightProjectionView = lightProjView;
+		//gBufferUbo.lightProjectionView = lightProjView;
+		shadowUbo.lightFarPlane = LIGHT_FAR;
 
 		while (!lveWindow.shouldClose()) {
 			glfwPollEvents();
@@ -72,6 +74,8 @@ namespace lve {
 			float frameTime = std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
 			currentTime = newTime;
 
+			std::cout << frameTime << std::endl;
+
 			//Limit frameTime to avoid resizing delay
 			frameTime = glm::min(frameTime, MIN_SECONDS_PER_FRAME);
 			
@@ -79,9 +83,10 @@ namespace lve {
 			camera.setViewYXZ(viewerObject.transform.translation, viewerObject.transform.rotation);
 
 			float aspect = lveRenderer.getAspectRatio();
-			camera.setPerspectiveProjection(glm::radians(50.0f), aspect, 0.1f, 50.0f);
+			camera.setPerspectiveProjection(glm::radians(50.0f), aspect, CAMERA_NEAR, CAMERA_FAR);
 
 			if (auto commandBuffer = lveRenderer.beginFrame()) {
+
 				int frameIndex = lveRenderer.getFrameIndex();
 
 				FrameInfo frameInfo{
@@ -89,6 +94,7 @@ namespace lve {
 					frameTime,
 					commandBuffer,
 					camera,
+					lveRenderer.getCurrentShadowDescriptorSet(),
 					lveRenderer.getCurrentGBufferDescriptorSet(),
 					lveRenderer.getCurrentCompositionDescriptorSet(),
 					gameObjects
@@ -102,11 +108,13 @@ namespace lve {
 				compositionUbo.viewPos = viewerObject.transform.translation;
 
 				lveRenderer.updateCurrentCompositionUbo(&compositionUbo);
+				lveRenderer.updateCurrentShadowUbo(&shadowUbo);
 
+				// check multithreading here
 				// render shadows
-				lveRenderer.beginShadowRenderPass(commandBuffer);
-				shadowRenderSystem.renderGameObjects(frameInfo, lightProjView);
-				lveRenderer.endShadowRenderPass(commandBuffer);
+				lveRenderer.beginShadowRenderPassConfig(commandBuffer);
+				// use a cube to have omnidirectional shadows
+				shadowRenderSystem.executeRenderPassCommands(frameInfo, light.getProjection(), light.getView(), &lveRenderer);
 
 				// render swap chain
 				lveRenderer.beginSwapChainRenderPass(commandBuffer);
@@ -183,7 +191,6 @@ namespace lve {
 		coloredCube3.transform.translation = { .5f, -1.f, 3.f };
 		coloredCube3.transform.scale = glm::vec3(0.5f, 1.f, 0.5f);
 		gameObjects.emplace(coloredCube3.getId(), std::move(coloredCube3));
-
 
 	}
 

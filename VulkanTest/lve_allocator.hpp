@@ -21,7 +21,13 @@ namespace lve {
             VkMemoryPropertyFlags properties,
             VkBuffer& buffer,
             VmaAllocation& constantBufferAllocation);
+        void createImage(VkImageCreateInfo* imageInfo,
+            VmaMemoryUsage memoryUsage,
+            VkMemoryPropertyFlags properties,
+            VkImage& image,
+            VmaAllocation& constantImageAllocation);
         void destroyBuffer(VkBuffer& buffer, VmaAllocation& constantBufferAllocation);
+        void destroyImage(VkImage& image, VmaAllocation& constantImageAllocation);
 
     private:
         LveDevice& device;

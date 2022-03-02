@@ -60,7 +60,7 @@ namespace lve {
 	void SimpleRenderSystem::createGBufferPipeline(VkRenderPass renderPass) {
 		assert(gBufferPipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
 		PipelineConfigInfo pipelineConfig{};
-		pipelineConfig.attachmentCount = 3;
+		pipelineConfig.attachmentCount = 2;
 		pipelineConfig.hasVertexBufferBound = true;
 		LvePipeline::defaultPipelineConfigInfo(pipelineConfig);
 		pipelineConfig.renderPass = renderPass;

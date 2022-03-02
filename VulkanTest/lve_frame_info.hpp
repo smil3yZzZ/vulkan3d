@@ -12,6 +12,7 @@ namespace lve {
 		float frameTime;
 		VkCommandBuffer commandBuffer;
 		LveCamera& camera;
+		VkDescriptorSet shadowDescriptorSet;
 		VkDescriptorSet gBufferDescriptorSet;
 		VkDescriptorSet compositionDescriptorSet;
 		LveGameObject::Map& gameObjects;

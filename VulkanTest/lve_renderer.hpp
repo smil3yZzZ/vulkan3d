@@ -5,6 +5,7 @@
 #include "lve_device.hpp"
 #include "lve_swap_chain.hpp"
 #include "lve_buffer.hpp"
+#include "lve_frame_info.hpp"
 
 #include <cassert>
 #include <vector>
@@ -13,18 +14,23 @@
 namespace lve {
 	class LveRenderer {
 	public:
+		static constexpr int NUM_CUBE_FACES = 6;
+
 		LveRenderer(LveWindow &window, LveDevice &device, LveAllocator &allocator);
 		~LveRenderer();
 
 		LveRenderer(const LveRenderer&) = delete;
 		LveRenderer& operator=(const LveRenderer&) = delete;
 
+
 		VkRenderPass getSwapChainRenderPass() const { return lveSwapChain->getRenderPass(); }
 		VkRenderPass getShadowRenderPass() const { return lveSwapChain->getShadowRenderPass(); }
 		float getAspectRatio() const { return lveSwapChain->extentAspectRatio(); };
 		float getShadowAspectRatio() const { return lveSwapChain->shadowExtentAspectRatio(); };
 		VkExtent2D getExtent() const { return lveSwapChain->getSwapChainExtent(); };
-		std::vector<LveSwapChain::Attachments> getSwapChainAttachments() { return lveSwapChain->getAttachments(); };
+		VkExtent2D getShadowMapExtent() const { return lveSwapChain->getShadowMapExtent(); };
+		LveSwapChain::Attachments getAttachments() { return lveSwapChain->getAttachments(currentImageIndex); };
+		LveSwapChain::Samplers getSamplers() { return lveSwapChain->getSamplers(currentImageIndex); };
 		bool isFrameInProgress() const { return isFrameStarted; }
 
 		VkCommandBuffer getCurrentCommandBuffer() const {
@@ -42,20 +48,25 @@ namespace lve {
 
 		VkCommandBuffer beginFrame();
 		void endFrame();
+		void beginShadowRenderPassConfig(VkCommandBuffer commandBuffer);
 		void beginShadowRenderPass(VkCommandBuffer commandBuffer);
 		void endShadowRenderPass(VkCommandBuffer commandBuffer);
 		void beginSwapChainRenderPass(VkCommandBuffer commandBuffer);
 		void endSwapChainRenderPass(VkCommandBuffer commandBuffer);
 
+		VkDescriptorSetLayout getShadowDescriptorSetLayout() { return lveSwapChain->getShadowDescriptorSetLayout(); };
 		VkDescriptorSetLayout getGBufferDescriptorSetLayout() { return lveSwapChain->getGBufferDescriptorSetLayout(); };
 		VkDescriptorSetLayout getCompositionDescriptorSetLayout() { return lveSwapChain->getCompositionDescriptorSetLayout(); };
+		VkDescriptorSet getCurrentShadowDescriptorSet() { return lveSwapChain->getCurrentShadowDescriptorSet(currentImageIndex); };
 		VkDescriptorSet getCurrentGBufferDescriptorSet() { return lveSwapChain->getCurrentGBufferDescriptorSet(currentImageIndex); };
 		VkDescriptorSet getCurrentCompositionDescriptorSet() { return lveSwapChain->getCurrentCompositionDescriptorSet(currentImageIndex);};
+		void updateCurrentShadowUbo(void* data) { return lveSwapChain->updateCurrentShadowUbo(data, currentImageIndex); };
 		void updateCurrentGBufferUbo(void* data) { return lveSwapChain->updateCurrentGBufferUbo(data, currentImageIndex); };
 		void updateCurrentCompositionUbo(void* data) { return lveSwapChain->updateCurrentCompositionUbo(data, currentImageIndex); };
 
 	private:
-		void createCommandBuffers();
+		void createMainCommandBuffers();
+		void createShadowCubeCommandBuffers();
 		void freeCommandBuffers();
 		void recreateSwapChain();
 
@@ -64,6 +75,7 @@ namespace lve {
 		LveAllocator& lveAllocator;
 		std::unique_ptr<LveSwapChain> lveSwapChain;
 		std::vector<VkCommandBuffer> commandBuffers;
+		std::vector<std::vector<VkCommandBuffer>> shadowCubeCommandBuffers;
 
 		uint32_t currentImageIndex;
 		int currentFrameIndex{ 0 };
