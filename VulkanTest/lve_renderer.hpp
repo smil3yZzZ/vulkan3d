@@ -38,6 +38,11 @@ namespace lve {
 			return commandBuffers[currentFrameIndex];
 		}
 
+		VkCommandBuffer getCurrentShadowCubeCommandBuffer(uint32_t faceIndex) const {
+			assert(isFrameStarted && "Cannot get command buffer when frame is not in progress");
+			return shadowCubeCommandBuffers[faceIndex][currentFrameIndex];
+		}
+
 		int getFrameIndex() const {
 			assert(isFrameStarted && "Cannot get frame index when frame not in progress");
 			return currentFrameIndex;
@@ -47,10 +52,10 @@ namespace lve {
 		size_t getCurrentImageIndex() { return currentImageIndex; }
 
 		VkCommandBuffer beginFrame();
-		void endFrame();
+		void endFrame(std::vector<VkCommandBuffer> parallelCommandBuffers);
 		void beginShadowRenderPassConfig(VkCommandBuffer commandBuffer);
-		void beginShadowRenderPass(VkCommandBuffer commandBuffer);
-		void endShadowRenderPass(VkCommandBuffer commandBuffer);
+		void beginShadowRenderPass(VkCommandBuffer commandBuffer, uint32_t faceIndex);
+		void endShadowRenderPass(VkCommandBuffer commandBuffer, uint32_t faceIndex);
 		void beginSwapChainRenderPass(VkCommandBuffer commandBuffer);
 		void endSwapChainRenderPass(VkCommandBuffer commandBuffer);
 

@@ -47,13 +47,14 @@ void DestroyDebugUtilsMessengerEXT(
 }
 
 // class member functions
-LveDevice::LveDevice(LveWindow &window) : window{window} {
+LveDevice::LveDevice(LveWindow& window, uint32_t numOfCubeFaces) : window{ window }, numOfCubeFaces{numOfCubeFaces} {
   createInstance();
   setupDebugMessenger();
   createSurface();
   pickPhysicalDevice();
   createLogicalDevice();
-  createCommandPool();
+  createMainCommandPool();
+  createShadowCubeCommandPools();
 }
 
 LveDevice::~LveDevice() {
@@ -179,7 +180,7 @@ void LveDevice::createLogicalDevice() {
   vkGetDeviceQueue(device_, indices.presentFamily, 0, &presentQueue_);
 }
 
-void LveDevice::createCommandPool() {
+void LveDevice::createMainCommandPool() {
   QueueFamilyIndices queueFamilyIndices = findPhysicalQueueFamilies();
 
   VkCommandPoolCreateInfo poolInfo = {};
@@ -191,6 +192,26 @@ void LveDevice::createCommandPool() {
   if (vkCreateCommandPool(device_, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
     throw std::runtime_error("failed to create command pool!");
   }
+}
+
+void LveDevice::createShadowCubeCommandPools() {
+    QueueFamilyIndices queueFamilyIndices = findPhysicalQueueFamilies();
+
+    VkCommandPoolCreateInfo poolInfo = {};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
+    poolInfo.flags =
+        VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+    //Change this
+    shadowCubeCommandPools.resize(numOfCubeFaces);
+
+    for (VkCommandPool& shadowCubeCommandPool : shadowCubeCommandPools) {
+        if (vkCreateCommandPool(device_, &poolInfo, nullptr, &shadowCubeCommandPool) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create command pool!");
+        }
+    }
+    
 }
 
 void LveDevice::createSurface() { window.createWindowSurface(instance, &surface_); }

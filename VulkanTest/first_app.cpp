@@ -112,9 +112,9 @@ namespace lve {
 
 				// check multithreading here
 				// render shadows
-				lveRenderer.beginShadowRenderPassConfig(commandBuffer);
+				//lveRenderer.beginShadowRenderPassConfig(commandBuffer);
 				// use a cube to have omnidirectional shadows
-				shadowRenderSystem.executeRenderPassCommands(frameInfo, light.getProjection(), light.getView(), &lveRenderer);
+				std::vector<VkCommandBuffer> parallelCommandBuffers = shadowRenderSystem.executeRenderPassCommands(frameInfo, light.getProjection(), light.getView(), &lveRenderer);
 
 				// render swap chain
 				lveRenderer.beginSwapChainRenderPass(commandBuffer);
@@ -122,7 +122,7 @@ namespace lve {
 				simpleRenderSystem.renderGameObjects(frameInfo, glm::inverse(camera.getProjection() * camera.getView()), glm::vec2(1.f/extent.width, 1.f/extent.height));
 				pointLightSystem.render(frameInfo);
 				lveRenderer.endSwapChainRenderPass(commandBuffer);
-				lveRenderer.endFrame();
+				lveRenderer.endFrame(parallelCommandBuffers);
 			}
 		}
 		vkDeviceWaitIdle(lveDevice.device());

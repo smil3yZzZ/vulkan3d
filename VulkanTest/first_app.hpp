@@ -39,7 +39,7 @@ namespace lve {
 		void updateModels(int powIteration);
 
 		LveWindow lveWindow{WIDTH, HEIGHT, "Hello Vulkan!"};
-		LveDevice lveDevice{ lveWindow };
+		LveDevice lveDevice{ lveWindow, LveRenderer::NUM_CUBE_FACES };
 		LveAllocator lveAllocator{ lveDevice };
 		LveRenderer lveRenderer{ lveWindow, lveDevice, lveAllocator};
 

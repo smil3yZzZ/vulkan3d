@@ -45,7 +45,7 @@ namespace lve {
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandPool = lveDevice.getCommandPool();
+		allocInfo.commandPool = lveDevice.getMainCommandPool();
 		allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
 
 		if (vkAllocateCommandBuffers(lveDevice.device(), &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
@@ -54,25 +54,29 @@ namespace lve {
 	}
 
 	void LveRenderer::createShadowCubeCommandBuffers() {
-		shadowCubeCommandBuffers.resize(LveSwapChain::MAX_FRAMES_IN_FLIGHT);
-
-		for (std::vector<VkCommandBuffer> commandBuffers : shadowCubeCommandBuffers) {
-			commandBuffers.resize(NUM_CUBE_FACES);
+		shadowCubeCommandBuffers.resize(NUM_CUBE_FACES);
+		int faceIndex = 0;
+		//Revisar si se crean dos para cada faceCube
+		for (std::vector<VkCommandBuffer>& commandBuffers : shadowCubeCommandBuffers) {
+			commandBuffers.resize(LveSwapChain::MAX_FRAMES_IN_FLIGHT);
 			VkCommandBufferAllocateInfo allocInfo{};
 			allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 			allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-			allocInfo.commandPool = lveDevice.getCommandPool();
+			allocInfo.commandPool = lveDevice.getShadowCubeCommandPools()[faceIndex];
 			allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
 
 			if (vkAllocateCommandBuffers(lveDevice.device(), &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
 				throw new std::runtime_error("failed to allocate command buffers");
 			}
-			
+			faceIndex++;
 		}
 	}
 
 	void LveRenderer::freeCommandBuffers() {
-		vkFreeCommandBuffers(lveDevice.device(), lveDevice.getCommandPool(), static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
+		vkFreeCommandBuffers(lveDevice.device(), lveDevice.getMainCommandPool(), static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
+		for (int i = 0; i < NUM_CUBE_FACES; i++) {
+			vkFreeCommandBuffers(lveDevice.device(), lveDevice.getShadowCubeCommandPools()[i], static_cast<uint32_t>(commandBuffers.size()), shadowCubeCommandBuffers[i].data());
+		}
 		commandBuffers.clear();
 	}
 
@@ -102,7 +106,7 @@ namespace lve {
 		return commandBuffer;
 	}
 
-	void LveRenderer::endFrame() {
+	void LveRenderer::endFrame(std::vector<VkCommandBuffer> parallelCommandBuffers) {
 		assert(isFrameStarted && "Can't call endFrame while frame is not in progress");
 		auto commandBuffer = getCurrentCommandBuffer();
 
@@ -110,7 +114,9 @@ namespace lve {
 			throw std::runtime_error("failed to record command buffer!");
 		}
 
-		auto result = lveSwapChain->submitCommandBuffers(&commandBuffer, &currentImageIndex);
+		parallelCommandBuffers.push_back(commandBuffer);
+
+		auto result = lveSwapChain->submitCommandBuffers(parallelCommandBuffers.data(), parallelCommandBuffers.size(), &currentImageIndex);
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || lveWindow.wasWindowResized()) {
 			lveWindow.resetWindowResizedFlag();
 			recreateSwapChain();
@@ -163,9 +169,11 @@ namespace lve {
 	}
 
 	void LveRenderer::beginShadowRenderPassConfig(VkCommandBuffer commandBuffer) {
+		/*
 		assert(isFrameStarted && "Can't call beginSwapChainRenderPass if frame is not in progress");
-		assert(commandBuffer == getCurrentCommandBuffer() && "Can't begin render pass on command buffer from a different frame");
+		assert(commandBuffer == getCurrentShadowCubeCommandBuffers()[faceIndex] && "Can't begin render pass on command buffer from a different frame");
 
+		
 		VkViewport viewport{};
 		viewport.x = 0.0f;
 		viewport.y = 0.0f;
@@ -176,11 +184,12 @@ namespace lve {
 		VkRect2D scissor{ {0, 0}, lveSwapChain->getShadowMapExtent() };
 		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+		*/
 	}
 
-	void LveRenderer::beginShadowRenderPass(VkCommandBuffer commandBuffer) {
+	void LveRenderer::beginShadowRenderPass(VkCommandBuffer commandBuffer, uint32_t faceIndex) {
 		assert(isFrameStarted && "Can't call beginSwapChainRenderPass if frame is not in progress");
-		assert(commandBuffer == getCurrentCommandBuffer() && "Can't begin render pass on command buffer from a different frame");
+		assert(commandBuffer == getCurrentShadowCubeCommandBuffer(faceIndex) && "Can't begin render pass on command buffer from a different frame");
 
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -197,11 +206,22 @@ namespace lve {
 		renderPassInfo.pClearValues = clearValues.data();
 
 		vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+		VkViewport viewport{};
+		viewport.x = 0.0f;
+		viewport.y = 0.0f;
+		viewport.width = static_cast<float>(lveSwapChain->getShadowMapExtent().width);
+		viewport.height = static_cast<float>(lveSwapChain->getShadowMapExtent().height);
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+		VkRect2D scissor{ {0, 0}, lveSwapChain->getShadowMapExtent() };
+		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 	}
 
-	void LveRenderer::endShadowRenderPass(VkCommandBuffer commandBuffer) {
+	void LveRenderer::endShadowRenderPass(VkCommandBuffer commandBuffer, uint32_t faceIndex) {
 		assert(isFrameStarted && "Can't call endSwapChainRenderPass if frame is not in progress");
-		assert(commandBuffer == getCurrentCommandBuffer() && "Can't end render pass on command buffer from a different frame");
+		assert(commandBuffer == getCurrentShadowCubeCommandBuffer(faceIndex) && "Can't end render pass on command buffer from a different frame");
 		vkCmdEndRenderPass(commandBuffer);
 	}
 

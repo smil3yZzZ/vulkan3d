@@ -30,7 +30,7 @@ class LveDevice {
   const bool enableValidationLayers = true;
 #endif
 
-  LveDevice(LveWindow &window);
+  LveDevice(LveWindow &window, uint32_t numOfCubeFaces);
   ~LveDevice();
 
   // Not copyable or movable
@@ -39,7 +39,8 @@ class LveDevice {
   LveDevice(LveDevice &&) = delete;
   LveDevice &operator=(LveDevice &&) = delete;
 
-  VkCommandPool getCommandPool() { return commandPool; }
+  VkCommandPool getMainCommandPool() { return commandPool; }
+  std::vector<VkCommandPool> getShadowCubeCommandPools() { return shadowCubeCommandPools; }
   VkPhysicalDevice getPhysicalDevice() { return physicalDevice; }
   VkDevice device() { return device_; }
   VkInstance getInstance() { return instance; }
@@ -80,7 +81,8 @@ class LveDevice {
   void createSurface();
   void pickPhysicalDevice();
   void createLogicalDevice();
-  void createCommandPool();
+  void createMainCommandPool();
+  void createShadowCubeCommandPools();
 
   // helper functions
   bool isDeviceSuitable(VkPhysicalDevice device);
@@ -96,7 +98,9 @@ class LveDevice {
   VkDebugUtilsMessengerEXT debugMessenger;
   VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
   LveWindow &window;
+  uint32_t numOfCubeFaces;
   VkCommandPool commandPool;
+  std::vector<VkCommandPool> shadowCubeCommandPools;
 
   VkDevice device_;
   VkSurfaceKHR surface_;

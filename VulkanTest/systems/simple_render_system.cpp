@@ -124,6 +124,7 @@ namespace lve {
 			0,
 			nullptr);
 
+		
 		for (auto& kv : frameInfo.gameObjects) {
 			auto& obj = kv.second;
 
@@ -144,6 +145,7 @@ namespace lve {
 			obj.model->bind(frameInfo.commandBuffer);
 			obj.model->draw(frameInfo.commandBuffer);
 		}
+		
 
 		//Subpass transition
 		vkCmdNextSubpass(frameInfo.commandBuffer, VK_SUBPASS_CONTENTS_INLINE);

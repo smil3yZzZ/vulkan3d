@@ -65,27 +65,36 @@ namespace lve {
 			);
 	}
 
-	void ShadowRenderSystem::renderGameObjects(FrameInfo& frameInfo, glm::mat4 lightProjView) {
+	void ShadowRenderSystem::beginParallelCommandBuffer(VkCommandBuffer commandBuffer) {
+		VkCommandBufferBeginInfo beginInfo{};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+		if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+			throw std::runtime_error("failed to begin recording command buffer");
+		}
+	}
+
+	void ShadowRenderSystem::renderGameObjects(ParallelExecutionInfo& parallelExecutionInfo, glm::mat4 lightProjView) {
 		//Set depth bias in order to avoid artifacts
 		vkCmdSetDepthBias(
-			frameInfo.commandBuffer,
+			parallelExecutionInfo.commandBuffer,
 			depthBiasConstant,
 			0.0f,
 			depthBiasSlope);
 
-		lveShadowPipeline->bind(frameInfo.commandBuffer);
+		lveShadowPipeline->bind(parallelExecutionInfo.commandBuffer);
 
 		vkCmdBindDescriptorSets(
-			frameInfo.commandBuffer,
+			parallelExecutionInfo.commandBuffer,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
 			shadowPipelineLayout,
 			0,
 			1,
-			&frameInfo.shadowDescriptorSet,
+			&parallelExecutionInfo.shadowDescriptorSet,
 			0,
 			nullptr);
 
-		for (auto& kv : frameInfo.gameObjects) {
+		for (auto& kv : parallelExecutionInfo.gameObjects) {
 			auto& obj = kv.second;
 
 			ShadowPushConstantData push{};
@@ -94,7 +103,7 @@ namespace lve {
 			push.lightProjView = lightProjView;
 
 			vkCmdPushConstants(
-				frameInfo.commandBuffer,
+				parallelExecutionInfo.commandBuffer,
 				shadowPipelineLayout,
 				VK_SHADER_STAGE_VERTEX_BIT,
 				0,
@@ -102,12 +111,73 @@ namespace lve {
 				&push
 			);
 
-			obj.model->bind(frameInfo.commandBuffer);
-			obj.model->draw(frameInfo.commandBuffer);
+			obj.model->bind(parallelExecutionInfo.commandBuffer);
+			obj.model->draw(parallelExecutionInfo.commandBuffer);
 		}
 	}
 
-	void ShadowRenderSystem::executeRenderPassCommands(FrameInfo& frameInfo, glm::mat4 projectionMatrix, glm::mat4 viewMatrix, LveRenderer* lveRenderer) {
+	std::vector<VkCommandBuffer> ShadowRenderSystem::executeRenderPassCommands(FrameInfo& frameInfo, glm::mat4 projectionMatrix, glm::mat4 viewMatrix, LveRenderer* lveRenderer) {
+		std::vector<ParallelExecutionInfo> parallelExecutionInfos;
+		std::vector<VkCommandBuffer> parallelCommandBuffers;
+
+		for (uint32_t faceIndex = 0; faceIndex < LveRenderer::NUM_CUBE_FACES; faceIndex++) {
+			VkCommandBuffer commandBuffer = lveRenderer->getCurrentShadowCubeCommandBuffer(faceIndex);
+			ParallelExecutionInfo parallelExecutionInfo{
+				faceIndex,
+				commandBuffer,
+				projectionMatrix,
+				viewMatrix,
+				lveRenderer,
+				frameInfo.shadowDescriptorSet,
+				frameInfo.gameObjects
+			};
+			parallelExecutionInfos.push_back(parallelExecutionInfo);
+			parallelCommandBuffers.push_back(commandBuffer);
+		}
+		
+		std::for_each(
+			std::execution::par_unseq,
+			parallelExecutionInfos.begin(),
+			parallelExecutionInfos.end(),
+			[this](ParallelExecutionInfo& item)
+			{
+				//item.lveRenderer->beginShadowRenderPassConfig(item.commandBuffer);
+				beginParallelCommandBuffer(item.commandBuffer);
+				item.lveRenderer->beginShadowRenderPass(item.commandBuffer, item.faceIndex);
+
+				switch (item.faceIndex)
+				{
+				case 0: // POSITIVE_X
+					item.viewMatrix = glm::rotate(item.viewMatrix, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+					item.viewMatrix = glm::rotate(item.viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+					break;
+				case 1:	// NEGATIVE_X
+					item.viewMatrix = glm::rotate(item.viewMatrix, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+					item.viewMatrix = glm::rotate(item.viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+					break;
+				case 2:	// POSITIVE_Y
+					item.viewMatrix = glm::rotate(item.viewMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+					break;
+				case 3:	// NEGATIVE_Y
+					item.viewMatrix = glm::rotate(item.viewMatrix, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+					break;
+				case 4:	// POSITIVE_Z
+					item.viewMatrix = glm::rotate(item.viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+					break;
+				case 5:	// NEGATIVE_Z
+					item.viewMatrix = glm::rotate(item.viewMatrix, glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+					break;
+				}
+
+				renderGameObjects(item, item.projectionMatrix * item.viewMatrix);
+
+				item.lveRenderer->endShadowRenderPass(item.commandBuffer, item.faceIndex);
+
+				copyImageToCube(item.commandBuffer, item.faceIndex, item.lveRenderer);
+				endParallelCommandBuffer(item.commandBuffer);
+			});
+		
+		/*
 		for (uint32_t faceIndex = 0; faceIndex < LveRenderer::NUM_CUBE_FACES; faceIndex++) {
 			lveRenderer->beginShadowRenderPass(frameInfo.commandBuffer);
 
@@ -141,9 +211,11 @@ namespace lve {
 
 			copyImageToCube(frameInfo, faceIndex, lveRenderer);
 		}
+		*/
+		return parallelCommandBuffers;
 	}
 
-	void ShadowRenderSystem::copyImageToCube(FrameInfo& frameInfo, uint32_t faceIndex, LveRenderer* lveRenderer) {
+	void ShadowRenderSystem::copyImageToCube(VkCommandBuffer commandBuffer, uint32_t faceIndex, LveRenderer* lveRenderer) {
 		
 		// Make sure color writes to the framebuffer are finished before using it as transfer source
 		VkImageSubresourceRange subresourceRange = {};
@@ -165,7 +237,7 @@ namespace lve {
 		imageMemoryBarrier.subresourceRange = subresourceRange;
 
 		vkCmdPipelineBarrier(
-			frameInfo.commandBuffer,
+			commandBuffer,
 			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			0,
@@ -194,7 +266,7 @@ namespace lve {
 		imageMemoryBarrier.subresourceRange = cubeFaceSubresourceRange;
 
 		vkCmdPipelineBarrier(
-			frameInfo.commandBuffer,
+			commandBuffer,
 			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			0,
@@ -224,7 +296,7 @@ namespace lve {
 		// Put image copy into command buffer
 
 		vkCmdCopyImage(
-			frameInfo.commandBuffer,
+			commandBuffer,
 			lveRenderer->getAttachments().shadowColor.image,
 			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 			lveRenderer->getSamplers().shadowCubeMap.attachment.image,
@@ -246,7 +318,7 @@ namespace lve {
 		imageMemoryBarrier.subresourceRange = subresourceRange;
 
 		vkCmdPipelineBarrier(
-			frameInfo.commandBuffer,
+			commandBuffer,
 			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			0,
@@ -268,12 +340,18 @@ namespace lve {
 		imageMemoryBarrier.subresourceRange = cubeFaceSubresourceRange;
 
 		vkCmdPipelineBarrier(
-			frameInfo.commandBuffer,
+			commandBuffer,
 			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			0,
 			0, nullptr,
 			0, nullptr,
 			1, &imageMemoryBarrier);
+	}
+
+	void ShadowRenderSystem::endParallelCommandBuffer(VkCommandBuffer commandBuffer) {
+		if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+			throw std::runtime_error("failed to record command buffer!");
+		}
 	}
 }

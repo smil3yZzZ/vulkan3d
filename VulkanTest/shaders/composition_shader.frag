@@ -48,6 +48,9 @@ float shadowCalculation(vec3 lightProjCoords)
 */
 
 void main() {
+	// Trying to detect samplerCube
+	float sampledDist = texture(samplerShadowCube, vec3(1.0, 1.0, 1.0)).r;
+
 	// Read previous pass shadow depth & G-Buffer values from previous sub pass
 	vec2 clipXY = gl_FragCoord.xy * push.invResolution * 2.0 - 1.0;
 	vec4 clipScene = vec4(clipXY, subpassLoad(samplerPositionDepth).x, 1.0);

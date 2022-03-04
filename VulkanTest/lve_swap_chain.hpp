@@ -105,7 +105,7 @@ class LveSwapChain {
   VkFormat findDepthFormat();
 
   VkResult acquireNextImage(uint32_t *imageIndex);
-  VkResult submitCommandBuffers(const VkCommandBuffer *buffers, uint32_t *imageIndex);
+  VkResult submitCommandBuffers(const VkCommandBuffer *buffers, uint32_t numOfCommandBuffers, uint32_t *imageIndex);
 
   bool compareSwapFormats(const LveSwapChain &swapChain) const {
       return swapChain.swapChainDepthFormat == swapChainDepthFormat &&

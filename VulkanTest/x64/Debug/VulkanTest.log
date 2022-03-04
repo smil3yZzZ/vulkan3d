@@ -1,16 +1,5 @@
-﻿  first_app.cpp
-  lve_renderer.cpp
-  lve_swap_chain.cpp
-C:\Users\holivera\source\repos\VulkanTest\VulkanTest\lve_swap_chain.cpp(342,59): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
-C:\Users\holivera\source\repos\VulkanTest\VulkanTest\lve_swap_chain.cpp(344,55): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
-C:\Users\holivera\source\repos\VulkanTest\VulkanTest\lve_swap_chain.cpp(690,61): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
-C:\Users\holivera\source\repos\VulkanTest\VulkanTest\lve_swap_chain.cpp(692,57): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
-C:\Users\holivera\source\repos\VulkanTest\VulkanTest\lve_swap_chain.cpp(732,37): warning C4267: 'argumento': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
-C:\Users\holivera\source\repos\VulkanTest\VulkanTest\lve_swap_chain.cpp(733,73): warning C4267: 'argumento': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
-C:\Users\holivera\source\repos\VulkanTest\VulkanTest\lve_swap_chain.cpp(734,75): warning C4267: 'argumento': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
-C:\Users\holivera\source\repos\VulkanTest\VulkanTest\lve_swap_chain.cpp(735,77): warning C4267: 'argumento': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
-  main.cpp
+﻿  lve_renderer.cpp
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\lve_renderer.cpp(119,132): warning C4267: 'argumento': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
   shadow_render_system.cpp
   Generando código...
-LINK : warning LNK4098: la biblioteca predeterminada'MSVCRT' entra en conflicto con otras bibliotecas; use la biblioteca /NODEFAULTLIB:biblioteca
   VulkanTest.vcxproj -> C:\Users\holivera\source\repos\VulkanTest\x64\Debug\VulkanTest.exe

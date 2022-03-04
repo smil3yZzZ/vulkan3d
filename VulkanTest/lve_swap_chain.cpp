@@ -102,7 +102,7 @@ VkResult LveSwapChain::acquireNextImage(uint32_t *imageIndex) {
 }
 
 VkResult LveSwapChain::submitCommandBuffers(
-    const VkCommandBuffer *buffers, uint32_t *imageIndex) {
+    const VkCommandBuffer *buffers, uint32_t numOfCommandBuffers, uint32_t *imageIndex) {
   if (imagesInFlight[*imageIndex] != VK_NULL_HANDLE) {
     vkWaitForFences(device.device(), 1, &imagesInFlight[*imageIndex], VK_TRUE, UINT64_MAX);
   }
@@ -117,7 +117,8 @@ VkResult LveSwapChain::submitCommandBuffers(
   submitInfo.pWaitSemaphores = waitSemaphores;
   submitInfo.pWaitDstStageMask = waitStages;
 
-  submitInfo.commandBufferCount = 1;
+  //Make this constant
+  submitInfo.commandBufferCount = numOfCommandBuffers;
   submitInfo.pCommandBuffers = buffers;
 
   VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
