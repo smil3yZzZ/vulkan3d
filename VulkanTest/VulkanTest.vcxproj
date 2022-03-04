@@ -155,40 +155,40 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="first_app.cpp" />
+    <ClCompile Include="vk3d_app.cpp" />
     <ClCompile Include="keyboard_movement_controller.cpp" />
-    <ClCompile Include="lve_allocator.cpp" />
-    <ClCompile Include="lve_buffer.cpp" />
-    <ClCompile Include="lve_camera.cpp" />
-    <ClCompile Include="lve_descriptors.cpp" />
-    <ClCompile Include="lve_game_object.cpp" />
-    <ClCompile Include="lve_model.cpp" />
-    <ClCompile Include="lve_pipeline.cpp" />
-    <ClCompile Include="lve_renderer.cpp" />
-    <ClCompile Include="lve_window.cpp" />
+    <ClCompile Include="vk3d_allocator.cpp" />
+    <ClCompile Include="vk3d_buffer.cpp" />
+    <ClCompile Include="vk3d_camera.cpp" />
+    <ClCompile Include="vk3d_descriptors.cpp" />
+    <ClCompile Include="vk3d_game_object.cpp" />
+    <ClCompile Include="vk3d_model.cpp" />
+    <ClCompile Include="vk3d_pipeline.cpp" />
+    <ClCompile Include="vk3d_renderer.cpp" />
+    <ClCompile Include="vk3d_window.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="lve_device.cpp" />
-    <ClCompile Include="lve_swap_chain.cpp" />
+    <ClCompile Include="vk3d_device.cpp" />
+    <ClCompile Include="vk3d_swap_chain.cpp" />
     <ClCompile Include="systems\point_light_system.cpp" />
     <ClCompile Include="systems\shadow_render_system.cpp" />
     <ClCompile Include="systems\simple_render_system.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="first_app.hpp" />
+    <ClInclude Include="vk3d_app.hpp" />
     <ClInclude Include="keyboard_movement_controller.hpp" />
-    <ClInclude Include="lve_allocator.hpp" />
-    <ClInclude Include="lve_buffer.hpp" />
-    <ClInclude Include="lve_camera.hpp" />
-    <ClInclude Include="lve_descriptors.hpp" />
-    <ClInclude Include="lve_frame_info.hpp" />
-    <ClInclude Include="lve_game_object.hpp" />
-    <ClInclude Include="lve_model.hpp" />
-    <ClInclude Include="lve_pipeline.hpp" />
-    <ClInclude Include="lve_renderer.hpp" />
-    <ClInclude Include="lve_utils.hpp" />
-    <ClInclude Include="lve_window.hpp" />
-    <ClInclude Include="lve_device.hpp" />
-    <ClInclude Include="lve_swap_chain.hpp" />
+    <ClInclude Include="vk3d_allocator.hpp" />
+    <ClInclude Include="vk3d_buffer.hpp" />
+    <ClInclude Include="vk3d_camera.hpp" />
+    <ClInclude Include="vk3d_descriptors.hpp" />
+    <ClInclude Include="vk3d_frame_info.hpp" />
+    <ClInclude Include="vk3d_game_object.hpp" />
+    <ClInclude Include="vk3d_model.hpp" />
+    <ClInclude Include="vk3d_pipeline.hpp" />
+    <ClInclude Include="vk3d_renderer.hpp" />
+    <ClInclude Include="vk3d_utils.hpp" />
+    <ClInclude Include="vk3d_window.hpp" />
+    <ClInclude Include="vk3d_device.hpp" />
+    <ClInclude Include="vk3d_swap_chain.hpp" />
     <ClInclude Include="systems\point_light_system.hpp" />
     <ClInclude Include="systems\shadow_render_system.hpp" />
     <ClInclude Include="systems\simple_render_system.hpp" />

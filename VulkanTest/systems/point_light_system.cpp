@@ -13,9 +13,9 @@
 #include <iostream>
 
 
-namespace lve {
+namespace vk3d {
 
-	PointLightSystem::PointLightSystem(LveDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout gBufferSetLayout, VkDescriptorSetLayout compositionSetLayout) : lveDevice{ device } {
+	PointLightSystem::PointLightSystem(Vk3dDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout gBufferSetLayout, VkDescriptorSetLayout compositionSetLayout) : lveDevice{ device } {
 		createPipelineLayout(gBufferSetLayout, compositionSetLayout);
 		createPipeline(renderPass);
 	}
@@ -41,13 +41,13 @@ namespace lve {
 	void PointLightSystem::createPipeline(VkRenderPass renderPass) {
 		assert(pipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
 		PipelineConfigInfo pipelineConfig{};
-		LvePipeline::defaultPipelineConfigInfo(pipelineConfig);
+		Vk3dPipeline::defaultPipelineConfigInfo(pipelineConfig);
 		pipelineConfig.attributeDescriptions.clear();
 		pipelineConfig.bindingDescriptions.clear();
 		pipelineConfig.renderPass = renderPass;
 		pipelineConfig.subpass = 1;
 		pipelineConfig.pipelineLayout = pipelineLayout;
-		lvePipeline = std::make_unique<LvePipeline>(
+		lvePipeline = std::make_unique<Vk3dPipeline>(
 			lveDevice,
 			"shaders/point_light.vert.spv",
 			"shaders/point_light.frag.spv",

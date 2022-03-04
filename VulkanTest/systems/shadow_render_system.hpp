@@ -1,16 +1,16 @@
 #pragma once
 
-#include "../lve_camera.hpp"
-#include "../lve_pipeline.hpp"
-#include "../lve_device.hpp"
-#include "../lve_game_object.hpp"
-#include "../lve_allocator.hpp"
-#include "../lve_frame_info.hpp"
+#include "../vk3d_camera.hpp"
+#include "../vk3d_pipeline.hpp"
+#include "../vk3d_device.hpp"
+#include "../vk3d_game_object.hpp"
+#include "../vk3d_allocator.hpp"
+#include "../vk3d_frame_info.hpp"
 
 #include <memory>
 #include <vector>
 
-namespace lve {
+namespace vk3d {
 	class ShadowRenderSystem {
 	public:
 		// Constant depth bias factor (always applied)
@@ -18,7 +18,7 @@ namespace lve {
 		// Slope depth bias factor, applied depending on polygon's slope
 		static constexpr float depthBiasSlope = 1.5f;
 
-		ShadowRenderSystem(LveDevice& device, VkRenderPass renderPass);
+		ShadowRenderSystem(Vk3dDevice& device, VkRenderPass renderPass);
 		~ShadowRenderSystem();
 
 		ShadowRenderSystem(const ShadowRenderSystem&) = delete;
@@ -30,10 +30,10 @@ namespace lve {
 		void createShadowPipelineLayout();
 		void createShadowPipeline(VkRenderPass renderPass);
 
-		LveDevice& lveDevice;
+		Vk3dDevice& lveDevice;
 
-		LveAllocator lveAllocator{ lveDevice };
-		std::unique_ptr<LvePipeline> lveShadowPipeline;
+		Vk3dAllocator lveAllocator{ lveDevice };
+		std::unique_ptr<Vk3dPipeline> lveShadowPipeline;
 		VkPipelineLayout shadowPipelineLayout;
 	};
 }

@@ -13,7 +13,7 @@
 #include <iostream>
 
 
-namespace lve {
+namespace vk3d {
 
 	struct GBufferPushConstantData {
 		glm::mat4 modelMatrix{ 1.f };
@@ -25,7 +25,7 @@ namespace lve {
 		glm::vec2 invResolution{ 1.f };
 	};
 
-	SimpleRenderSystem::SimpleRenderSystem(LveDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout gBufferSetLayout, VkDescriptorSetLayout compositionSetLayout) : lveDevice{device} {
+	SimpleRenderSystem::SimpleRenderSystem(Vk3dDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout gBufferSetLayout, VkDescriptorSetLayout compositionSetLayout) : lveDevice{device} {
 		createGBufferPipelineLayout(gBufferSetLayout);
 		createGBufferPipeline(renderPass);
 		createCompositionPipelineLayout(compositionSetLayout);
@@ -62,11 +62,11 @@ namespace lve {
 		PipelineConfigInfo pipelineConfig{};
 		pipelineConfig.attachmentCount = 3;
 		pipelineConfig.hasVertexBufferBound = true;
-		LvePipeline::defaultPipelineConfigInfo(pipelineConfig);
+		Vk3dPipeline::defaultPipelineConfigInfo(pipelineConfig);
 		pipelineConfig.renderPass = renderPass;
 		pipelineConfig.subpass = 0;
 		pipelineConfig.pipelineLayout = gBufferPipelineLayout;
-		lveGBufferPipeline = std::make_unique<LvePipeline>(
+		lveGBufferPipeline = std::make_unique<Vk3dPipeline>(
 			lveDevice,
 			"shaders/gbuffer_shader.vert.spv",
 			"shaders/gbuffer_shader.frag.spv",
@@ -98,11 +98,11 @@ namespace lve {
 		PipelineConfigInfo pipelineConfig{};
 		pipelineConfig.attachmentCount = 1;
 		pipelineConfig.hasVertexBufferBound = false;
-		LvePipeline::defaultPipelineConfigInfo(pipelineConfig);
+		Vk3dPipeline::defaultPipelineConfigInfo(pipelineConfig);
 		pipelineConfig.renderPass = renderPass;
 		pipelineConfig.subpass = 1;
 		pipelineConfig.pipelineLayout = compositionPipelineLayout;
-		lveCompositionPipeline = std::make_unique<LvePipeline>(
+		lveCompositionPipeline = std::make_unique<Vk3dPipeline>(
 			lveDevice,
 			"shaders/composition_shader.vert.spv",
 			"shaders/composition_shader.frag.spv",

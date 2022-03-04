@@ -13,14 +13,14 @@
 #include <iostream>
 
 
-namespace lve {
+namespace vk3d {
 
 	struct ShadowPushConstantData {
 		glm::mat4 modelMatrix{ 1.f };
 		glm::mat4 lightProjView{ 1.f };
 	};
 
-	ShadowRenderSystem::ShadowRenderSystem(LveDevice& device, VkRenderPass renderPass) : lveDevice{ device } {
+	ShadowRenderSystem::ShadowRenderSystem(Vk3dDevice& device, VkRenderPass renderPass) : lveDevice{ device } {
 		createShadowPipelineLayout();
 		createShadowPipeline(renderPass);
 	}
@@ -51,11 +51,11 @@ namespace lve {
 		PipelineConfigInfo pipelineConfig{};
 		pipelineConfig.attachmentCount = 0;
 		pipelineConfig.hasVertexBufferBound = true;
-		LvePipeline::shadowPipelineConfigInfo(pipelineConfig);
+		Vk3dPipeline::shadowPipelineConfigInfo(pipelineConfig);
 		pipelineConfig.renderPass = renderPass;
 		pipelineConfig.subpass = 0;
 		pipelineConfig.pipelineLayout = shadowPipelineLayout;
-		lveShadowPipeline = std::make_unique<LvePipeline>(
+		lveShadowPipeline = std::make_unique<Vk3dPipeline>(
 			lveDevice,
 			"shaders/shadow_shader.vert.spv",
 			"shaders/shadow_shader.frag.spv",

@@ -18,43 +18,43 @@
     <ClCompile Include="main.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
-    <ClCompile Include="lve_window.cpp">
+    <ClCompile Include="vk3d_window.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
-    <ClCompile Include="first_app.cpp">
+    <ClCompile Include="vk3d_app.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
-    <ClCompile Include="lve_pipeline.cpp">
+    <ClCompile Include="vk3d_pipeline.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
-    <ClCompile Include="lve_device.cpp">
+    <ClCompile Include="vk3d_device.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
-    <ClCompile Include="lve_swap_chain.cpp">
+    <ClCompile Include="vk3d_swap_chain.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
-    <ClCompile Include="lve_model.cpp">
+    <ClCompile Include="vk3d_model.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
-    <ClCompile Include="lve_allocator.cpp">
+    <ClCompile Include="vk3d_allocator.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
-    <ClCompile Include="lve_renderer.cpp">
+    <ClCompile Include="vk3d_renderer.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
-    <ClCompile Include="lve_camera.cpp">
+    <ClCompile Include="vk3d_camera.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
     <ClCompile Include="keyboard_movement_controller.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
-    <ClCompile Include="lve_game_object.cpp">
+    <ClCompile Include="vk3d_game_object.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
-    <ClCompile Include="lve_buffer.cpp">
+    <ClCompile Include="vk3d_buffer.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
-    <ClCompile Include="lve_descriptors.cpp">
+    <ClCompile Include="vk3d_descriptors.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
     <ClCompile Include="systems\simple_render_system.cpp">
@@ -68,52 +68,52 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="lve_window.hpp">
+    <ClInclude Include="vk3d_window.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="first_app.hpp">
+    <ClInclude Include="vk3d_app.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="lve_pipeline.hpp">
+    <ClInclude Include="vk3d_pipeline.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="lve_device.hpp">
+    <ClInclude Include="vk3d_device.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="lve_swap_chain.hpp">
+    <ClInclude Include="vk3d_swap_chain.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="lve_model.hpp">
+    <ClInclude Include="vk3d_model.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="lve_allocator.hpp">
+    <ClInclude Include="vk3d_allocator.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="vk_mem_alloc.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="lve_game_object.hpp">
+    <ClInclude Include="vk3d_game_object.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="lve_renderer.hpp">
+    <ClInclude Include="vk3d_renderer.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="lve_camera.hpp">
+    <ClInclude Include="vk3d_camera.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="keyboard_movement_controller.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="lve_utils.hpp">
+    <ClInclude Include="vk3d_utils.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="lve_buffer.hpp">
+    <ClInclude Include="vk3d_buffer.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="lve_frame_info.hpp">
+    <ClInclude Include="vk3d_frame_info.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="lve_descriptors.hpp">
+    <ClInclude Include="vk3d_descriptors.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="systems\simple_render_system.hpp">

@@ -1,4 +1,4 @@
-#include "first_app.hpp"
+#include "vk3d_app.hpp"
 
 // std
 #include <cstdlib>
@@ -6,7 +6,7 @@
 #include <stdexcept>
 
 int main() {
-	lve::FirstApp app{};
+	vk3d::Vk3dApp app{};
 
 	try {
 		app.run();

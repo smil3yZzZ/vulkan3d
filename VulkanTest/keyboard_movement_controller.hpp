@@ -1,9 +1,9 @@
 #pragma once
 
-#include "lve_game_object.hpp"
-#include "lve_window.hpp"
+#include "vk3d_game_object.hpp"
+#include "vk3d_window.hpp"
 
-namespace lve {
+namespace vk3d {
 	class KeyboardMovementController {
 	public:
 		struct KeyMappings {
@@ -19,7 +19,7 @@ namespace lve {
 			int lookDown = GLFW_KEY_DOWN;
 		};
 
-		void moveInPlaneXZ(GLFWwindow* window, float dt, LveGameObject& gameObject);
+		void moveInPlaneXZ(GLFWwindow* window, float dt, Vk3dGameObject& gameObject);
 
 		KeyMappings keys{};
 		float moveSpeed{ 3.f };

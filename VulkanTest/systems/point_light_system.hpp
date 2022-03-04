@@ -1,23 +1,23 @@
 #pragma once
 
-#include "../lve_camera.hpp"
-#include "../lve_pipeline.hpp"
-#include "../lve_device.hpp"
-#include "../lve_game_object.hpp"
-#include "../lve_allocator.hpp"
-#include "../lve_frame_info.hpp"
+#include "../vk3d_camera.hpp"
+#include "../vk3d_pipeline.hpp"
+#include "../vk3d_device.hpp"
+#include "../vk3d_game_object.hpp"
+#include "../vk3d_allocator.hpp"
+#include "../vk3d_frame_info.hpp"
 
 #include <memory>
 #include <vector>
 
-namespace lve {
+namespace vk3d {
 	class PointLightSystem {
 	public:
 		static constexpr int SIERPINSKI_DEPTH = 3;
 
 		static constexpr int NUMBER_OF_TRIANGLE_VERTICES = 3;
 
-		PointLightSystem(LveDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout gBufferSetLayout, VkDescriptorSetLayout compositionSetLayout);
+		PointLightSystem(Vk3dDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout gBufferSetLayout, VkDescriptorSetLayout compositionSetLayout);
 		~PointLightSystem();
 
 		PointLightSystem(const PointLightSystem&) = delete;
@@ -29,10 +29,10 @@ namespace lve {
 		void createPipelineLayout(VkDescriptorSetLayout gBufferSetLayout, VkDescriptorSetLayout compositionSetLayout);
 		void createPipeline(VkRenderPass renderPass);
 
-		LveDevice& lveDevice;
+		Vk3dDevice& lveDevice;
 
-		LveAllocator lveAllocator{ lveDevice };
-		std::unique_ptr<LvePipeline> lvePipeline;
+		Vk3dAllocator lveAllocator{ lveDevice };
+		std::unique_ptr<Vk3dPipeline> lvePipeline;
 		VkPipelineLayout pipelineLayout;
 	};
 }
