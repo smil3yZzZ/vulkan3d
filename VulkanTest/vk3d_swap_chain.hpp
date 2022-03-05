@@ -45,7 +45,7 @@ class Vk3dSwapChain {
 
     struct FrameBufferAttachment {
         VkImage image = VK_NULL_HANDLE;
-        VkDeviceMemory memory = VK_NULL_HANDLE;
+        VmaAllocation memory = VK_NULL_HANDLE;
         VkImageView view = VK_NULL_HANDLE;
         VkFormat format;
         VkDescriptorImageInfo descriptorInfo(VkSampler sampler = VK_NULL_HANDLE, VkImageLayout imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);

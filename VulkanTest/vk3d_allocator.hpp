@@ -22,6 +22,12 @@ namespace vk3d {
             VkBuffer& buffer,
             VmaAllocation& constantBufferAllocation);
         void destroyBuffer(VkBuffer& buffer, VmaAllocation& constantBufferAllocation);
+        void createImage(VkImageCreateInfo* imageInfo,
+            VmaMemoryUsage memoryUsage,
+            VkMemoryPropertyFlags properties,
+            VkImage& image,
+            VmaAllocation& constantImageAllocation);
+        void destroyImage(VkImage& image, VmaAllocation& constantImageAllocation);
 
     private:
         Vk3dDevice& device;

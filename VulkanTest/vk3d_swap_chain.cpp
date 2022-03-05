@@ -449,11 +449,7 @@ void Vk3dSwapChain::createAttachment(VkFormat format, VkImageUsageFlags usage, F
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imageInfo.flags = 0;
 
-    device.createImageWithInfo(
-        imageInfo,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        attachment->image,
-        attachment->memory);
+    allocator.createImage(&imageInfo, VMA_MEMORY_USAGE_GPU_ONLY, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, attachment->image, attachment->memory);
 
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -552,8 +548,7 @@ VkFormat Vk3dSwapChain::findDepthFormat() {
 
 void Vk3dSwapChain::destroyAttachment(FrameBufferAttachment* attachment) {
     vkDestroyImageView(device.device(), attachment->view, nullptr);
-    vkDestroyImage(device.device(), attachment->image, nullptr);
-    vkFreeMemory(device.device(), attachment->memory, nullptr);
+    allocator.destroyImage(attachment->image, attachment->memory);
 }
 
 VkDescriptorImageInfo Vk3dSwapChain::FrameBufferAttachment::descriptorInfo(VkSampler sampler, VkImageLayout imageLayout) {

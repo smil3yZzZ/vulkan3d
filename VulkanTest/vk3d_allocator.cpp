@@ -51,4 +51,21 @@ namespace vk3d {
 		vmaDestroyBuffer(allocator, buffer, constantBufferAllocation);
 	}
 
+	void Vk3dAllocator::createImage(VkImageCreateInfo* imageInfo,
+		VmaMemoryUsage memoryUsage,
+		VkMemoryPropertyFlags properties,
+		VkImage& image,
+		VmaAllocation& constantImageAllocation) {
+
+		VmaAllocationCreateInfo allocInfo = {};
+		allocInfo.usage = memoryUsage;
+		allocInfo.requiredFlags = properties;
+
+		vmaCreateImage(this->allocator, imageInfo, &allocInfo, &image, &constantImageAllocation, nullptr);
+	}
+
+	void Vk3dAllocator::destroyImage(VkImage& image, VmaAllocation& constantImageAllocation) {
+		vmaDestroyImage(allocator, image, constantImageAllocation);
+	}
+
 }
