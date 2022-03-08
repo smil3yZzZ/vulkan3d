@@ -47,10 +47,13 @@ namespace vk3d {
 		void beginSwapChainRenderPass(VkCommandBuffer commandBuffer);
 		void endSwapChainRenderPass(VkCommandBuffer commandBuffer);
 
+		VkDescriptorSetLayout getShadowDescriptorSetLayout() { return lveSwapChain->getShadowDescriptorSetLayout(); };
 		VkDescriptorSetLayout getGBufferDescriptorSetLayout() { return lveSwapChain->getGBufferDescriptorSetLayout(); };
 		VkDescriptorSetLayout getCompositionDescriptorSetLayout() { return lveSwapChain->getCompositionDescriptorSetLayout(); };
+		VkDescriptorSet getCurrentShadowDescriptorSet() { return lveSwapChain->getCurrentShadowDescriptorSet(currentImageIndex); };
 		VkDescriptorSet getCurrentGBufferDescriptorSet() { return lveSwapChain->getCurrentGBufferDescriptorSet(currentImageIndex); };
 		VkDescriptorSet getCurrentCompositionDescriptorSet() { return lveSwapChain->getCurrentCompositionDescriptorSet(currentImageIndex);};
+		void updateCurrentShadowUbo(void* data) { return lveSwapChain->updateCurrentShadowUbo(data, currentImageIndex); };
 		void updateCurrentGBufferUbo(void* data) { return lveSwapChain->updateCurrentGBufferUbo(data, currentImageIndex); };
 		void updateCurrentCompositionUbo(void* data) { return lveSwapChain->updateCurrentCompositionUbo(data, currentImageIndex); };
 

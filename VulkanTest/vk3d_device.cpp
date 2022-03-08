@@ -86,6 +86,8 @@ void Vk3dDevice::createInstance() {
   createInfo.pApplicationInfo = &appInfo;
 
   auto extensions = getRequiredExtensions();
+  //Multiview instance extension
+  extensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
   createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
   createInfo.ppEnabledExtensionNames = extensions.data();
 
@@ -170,6 +172,13 @@ void Vk3dDevice::createLogicalDevice() {
   } else {
     createInfo.enabledLayerCount = 0;
   }
+
+  VkPhysicalDeviceMultiviewFeaturesKHR physicalDeviceMultiviewFeatures{};
+
+  physicalDeviceMultiviewFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR;
+  physicalDeviceMultiviewFeatures.multiview = VK_TRUE;
+
+  createInfo.pNext = &physicalDeviceMultiviewFeatures;
 
   if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device_) != VK_SUCCESS) {
     throw std::runtime_error("failed to create logical device!");
@@ -270,10 +279,6 @@ std::vector<const char *> Vk3dDevice::getRequiredExtensions() {
   if (enableValidationLayers) {
     extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
   }
-
-  //Add multiview extensions
-  //first device, then instance. Check!
-  //extensions.push_back(VK_KHR_MULTIVIEW_EXTENSION_NAME);
 
   return extensions;
 }

@@ -12,6 +12,7 @@ namespace vk3d {
 		float frameTime;
 		VkCommandBuffer commandBuffer;
 		Vk3dCamera& camera;
+		VkDescriptorSet shadowDescriptorSet;
 		VkDescriptorSet gBufferDescriptorSet;
 		VkDescriptorSet compositionDescriptorSet;
 		Vk3dGameObject::Map& gameObjects;

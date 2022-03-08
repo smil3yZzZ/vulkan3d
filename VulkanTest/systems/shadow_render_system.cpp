@@ -17,11 +17,11 @@ namespace vk3d {
 
 	struct ShadowPushConstantData {
 		glm::mat4 modelMatrix{ 1.f };
-		glm::mat4 lightProjView{ 1.f };
 	};
 
-	ShadowRenderSystem::ShadowRenderSystem(Vk3dDevice& device, VkRenderPass renderPass) : lveDevice{ device } {
-		createShadowPipelineLayout();
+	//Add here descriptor set
+	ShadowRenderSystem::ShadowRenderSystem(Vk3dDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout shadowSetLayout) : lveDevice{ device } {
+		createShadowPipelineLayout(shadowSetLayout);
 		createShadowPipeline(renderPass);
 	}
 
@@ -29,16 +29,18 @@ namespace vk3d {
 		vkDestroyPipelineLayout(lveDevice.device(), shadowPipelineLayout, nullptr);
 	}
 
-	void ShadowRenderSystem::createShadowPipelineLayout() {
+	void ShadowRenderSystem::createShadowPipelineLayout(VkDescriptorSetLayout shadowSetLayout) {
 		VkPushConstantRange pushConstantRange{};
 		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 		pushConstantRange.offset = 0;
 		pushConstantRange.size = sizeof(ShadowPushConstantData);
 
+		std::vector<VkDescriptorSetLayout> descriptorSetLayouts{ shadowSetLayout };
+
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 0;
-		pipelineLayoutInfo.pSetLayouts = nullptr;
+		pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
+		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 		if (vkCreatePipelineLayout(lveDevice.device(), &pipelineLayoutInfo, nullptr, &shadowPipelineLayout) != VK_SUCCESS) {
@@ -49,7 +51,7 @@ namespace vk3d {
 	void ShadowRenderSystem::createShadowPipeline(VkRenderPass renderPass) {
 		assert(shadowPipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
 		PipelineConfigInfo pipelineConfig{};
-		pipelineConfig.attachmentCount = 0;
+		pipelineConfig.attachmentCount = 1;
 		pipelineConfig.hasVertexBufferBound = true;
 		Vk3dPipeline::shadowPipelineConfigInfo(pipelineConfig);
 		pipelineConfig.renderPass = renderPass;
@@ -63,16 +65,27 @@ namespace vk3d {
 			);
 	}
 
-	void ShadowRenderSystem::renderGameObjects(FrameInfo& frameInfo, glm::mat4 lightProjView) {
+	void ShadowRenderSystem::renderGameObjects(FrameInfo& frameInfo) {
 
 		//Set depth bias in order to avoid artifacts
+		
 		vkCmdSetDepthBias(
 			frameInfo.commandBuffer,
 			depthBiasConstant,
 			0.0f,
 			depthBiasSlope);
-
+		
 		lveShadowPipeline->bind(frameInfo.commandBuffer);
+
+		vkCmdBindDescriptorSets(
+			frameInfo.commandBuffer,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			shadowPipelineLayout,
+			0,
+			1,
+			&frameInfo.shadowDescriptorSet,
+			0,
+			nullptr);
 
 		for (auto& kv : frameInfo.gameObjects) {
 			auto& obj = kv.second;
@@ -80,7 +93,6 @@ namespace vk3d {
 			ShadowPushConstantData push{};
 
 			push.modelMatrix = obj.transform.mat4();
-			push.lightProjView = lightProjView;
 
 			vkCmdPushConstants(
 				frameInfo.commandBuffer,

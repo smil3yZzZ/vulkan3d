@@ -2,17 +2,18 @@
 
 layout (input_attachment_index = 0, binding = 0) uniform subpassInput samplerNormal;
 layout (input_attachment_index = 1, binding = 1) uniform subpassInput samplerAlbedo;
-layout (input_attachment_index = 2, binding = 2) uniform subpassInput samplerLightSpacePosition;
-layout (input_attachment_index = 3, binding = 3) uniform subpassInput samplerPositionDepth;
-layout (binding = 5) uniform sampler2D samplerShadowDepth;
+layout (input_attachment_index = 2, binding = 2) uniform subpassInput samplerPositionDepth;
+layout (binding = 4) uniform samplerCube samplerShadowCube;
 
 layout (location = 0) out vec4 outColor;
 
-layout(set = 0, binding = 4) uniform CompositionUbo {
+layout(set = 0, binding = 3) uniform CompositionUbo {
 	vec3 viewPos;
 	vec4 ambientLightColor; //w is intensity
 	vec3 lightPosition;
 	vec4 lightColor; // w is light intensity
+	float lightNearPlane;
+	float lightFarPlane;
 } ubo;
 
 layout(push_constant) uniform Push {
@@ -22,7 +23,9 @@ layout(push_constant) uniform Push {
 
 const float specularStrength = 0.5;
 const float shininess = 1;
+const float EPSILON = 0.15;
 
+/*
 float shadowCalculation(vec3 lightProjCoords)
 {
 	// If the fragment is outside the light's projection then it is outside
@@ -44,9 +47,11 @@ float shadowCalculation(vec3 lightProjCoords)
     float shadow = currentDepth > closestDepth ? 0.5 : 0.0;
 
     return shadow;
-}  
+}
+*/
 
 void main() {
+	
 	// Read previous pass shadow depth & G-Buffer values from previous sub pass
 	vec2 clipXY = gl_FragCoord.xy * push.invResolution * 2.0 - 1.0;
 	vec4 clipScene = vec4(clipXY, subpassLoad(samplerPositionDepth).x, 1.0);
@@ -55,10 +60,29 @@ void main() {
 	vec4 fragPosWorld_w = push.invViewProj * clipScene;
 	vec3 fragPosWorld = fragPosWorld_w.xyz / fragPosWorld_w.w;
 
+	//Calculate shadow
+	vec3 inLightDir = fragPosWorld - ubo.lightPosition;
+	float dist    = length(inLightDir);
+    vec3 lightDir = inLightDir / dist;
+
+	/*
+	vec3 AbsVec = abs(inLightDir);
+    float LocalZcomp = max(AbsVec.x, max(AbsVec.y, AbsVec.z));
+
+    const float f = 2048.0;
+    const float n = 0.1;
+    float NormZComp = (f+n) / (f-n) - (2*f*n)/(f-n)/LocalZcomp;
+	float vecDepth = (NormZComp + 1.0) * 0.5;
+	*/
+
+	float depth = texture(samplerShadowCube, lightDir).r;
+	float shadow = dist < (depth) ? 0.0 : 0.5;
+
 	//vec4 fragPosLight_w = ubo.lightProjView * fragPosWorld_w;
-	vec4 fragPosLight_w = subpassLoad(samplerLightSpacePosition);
-	vec3 fragPosLight = fragPosLight_w.xyz / fragPosLight_w.w;
-	float shadow = shadowCalculation(fragPosLight);
+	//vec4 fragPosLight_w = subpassLoad(samplerLightSpacePosition);
+	//vec3 fragPosLight = fragPosLight_w.xyz / fragPosLight_w.w;
+	//float shadow = shadowCalculation(fragPosLight);
+	//float shadow = 0.0;
 
 	vec3 normal = subpassLoad(samplerNormal).xyz;
 	vec4 fragColor = subpassLoad(samplerAlbedo);
@@ -79,4 +103,6 @@ void main() {
 	vec3 specularLight = specularStrength * spec * lightColor;
 	
 	outColor = vec4((diffuseLight + (1.0 - shadow) * ambientLight + specularLight) * fragColor.xyz, fragColor.a);
+	//outColor = vec4(dist, depth, 0.0, 1.0);
+	//outColor = vec4(fragPosWorld, 1.0);
 }

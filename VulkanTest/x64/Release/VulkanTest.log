@@ -1,8 +1,25 @@
-﻿  main.cpp
+﻿  keyboard_movement_controller.cpp
+  main.cpp
+  point_light_system.cpp
+  shadow_render_system.cpp
+  simple_render_system.cpp
   vk3d_app.cpp
+  vk3d_game_object.cpp
+  vk3d_model.cpp
+  vk3d_pipeline.cpp
+  vk3d_renderer.cpp
+  vk3d_swap_chain.cpp
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(342,59): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(344,55): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(629,61): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(631,57): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(682,37): warning C4267: 'argumento': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(683,73): warning C4267: 'argumento': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(684,75): warning C4267: 'argumento': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(685,77): warning C4267: 'argumento': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
   Generando código
-  6 of 5062 functions ( 0.1%) were compiled, the rest were copied from previous compilation.
-    5 functions were new in current compilation
-    6 functions had inline decision re-evaluated but remain unchanged
+  1 of 5081 functions (<0.1%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    8 functions had inline decision re-evaluated but remain unchanged
   Generación de código finalizada
   VulkanTest.vcxproj -> C:\Users\holivera\source\repos\VulkanTest\x64\Release\VulkanTest.exe

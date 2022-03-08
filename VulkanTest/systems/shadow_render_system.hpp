@@ -18,16 +18,16 @@ namespace vk3d {
 		// Slope depth bias factor, applied depending on polygon's slope
 		static constexpr float depthBiasSlope = 1.5f;
 
-		ShadowRenderSystem(Vk3dDevice& device, VkRenderPass renderPass);
+		ShadowRenderSystem(Vk3dDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout shadowSetLayout);
 		~ShadowRenderSystem();
 
 		ShadowRenderSystem(const ShadowRenderSystem&) = delete;
 		ShadowRenderSystem& operator=(const ShadowRenderSystem&) = delete;
 
-		void renderGameObjects(FrameInfo& frameInfo, glm::mat4 lightProjView);
+		void renderGameObjects(FrameInfo& frameInfo);
 
 	private:
-		void createShadowPipelineLayout();
+		void createShadowPipelineLayout(VkDescriptorSetLayout shadowSetLayout);
 		void createShadowPipeline(VkRenderPass renderPass);
 
 		Vk3dDevice& lveDevice;
