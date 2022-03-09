@@ -18,6 +18,7 @@ namespace vk3d {
 
 		glm::mat4 mat4();
 		glm::mat3 normalMatrix();
+		void resetRotation();
 	};
 
 	class Vk3dGameObject {

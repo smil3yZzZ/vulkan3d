@@ -51,10 +51,10 @@ namespace vk3d {
 		Vk3dSwapChain::CompositionUbo compositionUbo{};
 
 		viewerObject.transform.translation = compositionUbo.lightPosition;
-		viewerObject.transform.rotation.x = -1.5f;
-		viewerObject.transform.rotation.y = 0.75f;
+		viewerObject.transform.rotation.x = glm::radians(-90.0f);
+		//viewerObject.transform.rotation.y = 0.75f;
 		
-		//lightObject.transform.translation = compositionUbo.lightPosition;
+		lightObject.transform.translation = compositionUbo.lightPosition;
 		//lightObject.transform.rotation.x = -.9f;
 		//lightObject.transform.rotation.y = 0.75f;
 
@@ -68,39 +68,48 @@ namespace vk3d {
 
 		for (int faceIndex = 0; faceIndex < Vk3dSwapChain::NUM_CUBE_FACES; faceIndex++) {
 			
-			glm::mat4 lightViewMatrix;
+			lightObject.transform.resetRotation();
+			//lightViewMatrix = glm::translate(lightViewMatrix, compositionUbo.lightPosition);
 
 			switch (faceIndex)
 			{
 			case 0: // POSITIVE_X
-				lightViewMatrix = glm::lookAt(compositionUbo.lightPosition, compositionUbo.lightPosition + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
-				//lightViewMatrix = light.getView();
-				//lightViewMatrix = glm::rotate(light.getView(), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+				lightObject.transform.rotation.y = glm::radians(90.0f);
+				//lightViewMatrix = glm::lookAt(compositionUbo.lightPosition, compositionUbo.lightPosition + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+				//lightViewMatrix = glm::rotate(lightViewMatrix, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 				//lightViewMatrix = glm::rotate(lightViewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 				break;
 			case 1:	// NEGATIVE_X
-				lightViewMatrix = glm::lookAt(compositionUbo.lightPosition, compositionUbo.lightPosition + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
-				//lightViewMatrix = glm::rotate(light.getView(), glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+				lightObject.transform.rotation.y = glm::radians(-90.0f);
+				//lightViewMatrix = glm::lookAt(compositionUbo.lightPosition, compositionUbo.lightPosition + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+				//lightViewMatrix = glm::rotate(lightViewMatrix, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 				//lightViewMatrix = glm::rotate(lightViewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 				break;
 			case 2:	// POSITIVE_Y
-				lightViewMatrix = glm::lookAt(compositionUbo.lightPosition, compositionUbo.lightPosition + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, 1.0));
-				//lightViewMatrix = glm::rotate(light.getView(), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+				lightObject.transform.rotation.x = glm::radians(-90.0f);
+				//lightObject.transform.rotation.y = glm::radians(180.0f);
+				//lightViewMatrix = glm::lookAt(compositionUbo.lightPosition, compositionUbo.lightPosition + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, 1.0));
+				//lightViewMatrix = glm::rotate(lightViewMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 				break;
 			case 3:	// NEGATIVE_Y
-				lightViewMatrix = glm::lookAt(compositionUbo.lightPosition, compositionUbo.lightPosition + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, -1.0));
-				//lightViewMatrix = glm::rotate(light.getView(), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+				lightObject.transform.rotation.x = glm::radians(90.0f);
+				//lightObject.transform.rotation.y = glm::radians(180.0f);
+				//lightViewMatrix = glm::lookAt(compositionUbo.lightPosition, compositionUbo.lightPosition + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, -1.0));
+				//lightViewMatrix = glm::rotate(lightViewMatrix, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 				break;
 			case 4:	// POSITIVE_Z
-				lightViewMatrix = glm::lookAt(compositionUbo.lightPosition, compositionUbo.lightPosition + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, 1.0, 0.0));
-				//lightViewMatrix = glm::rotate(light.getView(), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+				lightObject.transform.rotation.y = glm::radians(0.f);
+				//lightViewMatrix = glm::lookAt(compositionUbo.lightPosition, compositionUbo.lightPosition + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, 1.0, 0.0));
+				//lightViewMatrix = glm::rotate(lightViewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 				break;
 			case 5:	// NEGATIVE_Z
-				lightViewMatrix = glm::lookAt(compositionUbo.lightPosition, compositionUbo.lightPosition + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, 1.0, 0.0));
-				//lightViewMatrix = glm::rotate(light.getView(), glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+				lightObject.transform.rotation.y = glm::radians(180.0f);
+				//lightViewMatrix = glm::lookAt(compositionUbo.lightPosition, compositionUbo.lightPosition + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, 1.0, 0.0));
+				//lightViewMatrix = glm::rotate(lightViewMatrix, glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 				break;
 			}
-			shadowUbo.projectionView[faceIndex] = light.getProjection() * lightViewMatrix;
+			light.setViewYXZ(lightObject.transform.translation, lightObject.transform.rotation);
+			shadowUbo.projectionView[faceIndex] = light.getProjection() * light.getView();
 		}
 
 		//glm::mat4 lightProjView = light.getProjection() * light.getView();

@@ -23,7 +23,7 @@ layout(push_constant) uniform Push {
 
 const float specularStrength = 0.5;
 const float shininess = 1;
-const float EPSILON = 0.15;
+const float EPSILON = 0.30;
 
 /*
 float shadowCalculation(vec3 lightProjCoords)
@@ -55,7 +55,6 @@ void main() {
 	// Read previous pass shadow depth & G-Buffer values from previous sub pass
 	vec2 clipXY = gl_FragCoord.xy * push.invResolution * 2.0 - 1.0;
 	vec4 clipScene = vec4(clipXY, subpassLoad(samplerPositionDepth).x, 1.0);
-	//vec4 clipShadow = vec4(clipXY, subpassLoad(samplerPositionDepth).x, 1.0);
 
 	vec4 fragPosWorld_w = push.invViewProj * clipScene;
 	vec3 fragPosWorld = fragPosWorld_w.xyz / fragPosWorld_w.w;
@@ -65,18 +64,10 @@ void main() {
 	float dist    = length(inLightDir);
     vec3 lightDir = inLightDir / dist;
 
-	/*
-	vec3 AbsVec = abs(inLightDir);
-    float LocalZcomp = max(AbsVec.x, max(AbsVec.y, AbsVec.z));
-
-    const float f = 2048.0;
-    const float n = 0.1;
-    float NormZComp = (f+n) / (f-n) - (2*f*n)/(f-n)/LocalZcomp;
-	float vecDepth = (NormZComp + 1.0) * 0.5;
-	*/
-
 	float depth = texture(samplerShadowCube, lightDir).r;
-	float shadow = dist < (depth) ? 0.0 : 0.5;
+	float shadow = dist < (depth + EPSILON) ? 0.0 : 0.5;
+
+	vec4 worldPos = texture(samplerShadowCube, lightDir).rgba;
 
 	//vec4 fragPosLight_w = ubo.lightProjView * fragPosWorld_w;
 	//vec4 fragPosLight_w = subpassLoad(samplerLightSpacePosition);
@@ -101,8 +92,22 @@ void main() {
 
 	float spec = pow(max(dot(normal, halfwayDirection), 0.0), shininess);
 	vec3 specularLight = specularStrength * spec * lightColor;
+
+	float visibleFragment = 0.0;
+	
+	if (dist < depth) {
+		dist = dist/depth;
+		depth /= depth;
+		visibleFragment = 1.0;
+	}
+	else {
+		dist /= dist;
+		depth = depth/dist;
+	}
+	
 	
 	outColor = vec4((diffuseLight + (1.0 - shadow) * ambientLight + specularLight) * fragColor.xyz, fragColor.a);
-	//outColor = vec4(dist, depth, 0.0, 1.0);
+	//outColor = vec4(dist, depth, visibleFragment, 1.0);
+	//outColor = vec4(fragPosWorld, 1.0);
 	//outColor = vec4(fragPosWorld, 1.0);
 }

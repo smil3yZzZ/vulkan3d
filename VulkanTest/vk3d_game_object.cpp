@@ -57,4 +57,8 @@ namespace vk3d {
 			},
 		};
 	}
+
+	void TransformComponent::resetRotation() {
+		rotation = {0.f, 0.f, 0.f};
+	}
 }

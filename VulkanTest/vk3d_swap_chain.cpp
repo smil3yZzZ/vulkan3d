@@ -53,6 +53,7 @@ Vk3dSwapChain::~Vk3dSwapChain() {
       destroyAttachment(&attachments.albedo);
       destroyAttachment(&attachments.depth);
       destroyAttachment(&attachments.shadowDepth);
+      destroyAttachment(&attachments.worldPos);
   }
   attachmentsVector.clear();
 
@@ -295,7 +296,7 @@ void Vk3dSwapChain::createCompositionRenderPass() {
 
   VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 
-  VkAttachmentReference inputReferences[3];
+  VkAttachmentReference inputReferences[4];
   inputReferences[0] = { 1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
   inputReferences[1] = { 2, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
   inputReferences[2] = { 3, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
@@ -314,7 +315,7 @@ void Vk3dSwapChain::createCompositionRenderPass() {
   dependencies[0].dstSubpass = 0;
   dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
   dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-  dependencies[0].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+  dependencies[0].srcAccessMask = 0;
   dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
   dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
@@ -563,6 +564,7 @@ void Vk3dSwapChain::createShadowSampler() {
     }
 
     for (auto& attachments: attachmentsVector) {
+        //createAttachment(VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.worldPos, shadowMapExtent, true);
         createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &attachments.shadowDepth, shadowMapExtent, true);
     }
 }
@@ -570,7 +572,7 @@ void Vk3dSwapChain::createShadowSampler() {
 void Vk3dSwapChain::createShadowRenderPass() {
     std::array<VkAttachmentDescription, 2> attachments{};
 
-    // Color attachment (shadow)
+    // Position attachment (shadow)
     attachments[0].format = SHADOW_FB_COLOR_FORMAT;
     attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
     attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -595,12 +597,13 @@ void Vk3dSwapChain::createShadowRenderPass() {
     // One subpass
     std::array<VkSubpassDescription, 1> subpassDescriptions{};
 
-    VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+    VkAttachmentReference colorReferences[1];
+    colorReferences[0] = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
     VkAttachmentReference depthReference = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
     subpassDescriptions[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpassDescriptions[0].colorAttachmentCount = 1;
-    subpassDescriptions[0].pColorAttachments = &colorReference;
+    subpassDescriptions[0].pColorAttachments = colorReferences;
     subpassDescriptions[0].pDepthStencilAttachment = &depthReference;
 
     // Subpass dependencies for layout transitions

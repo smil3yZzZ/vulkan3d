@@ -22,7 +22,7 @@ namespace vk3d {
 		static constexpr float MIN_SECONDS_PER_FRAME = 1.f/60.f;
 
 		static constexpr float LIGHT_NEAR_PLANE = 0.1f;
-		static constexpr float LIGHT_FAR_PLANE = 50.0f;
+		static constexpr float LIGHT_FAR_PLANE = 20.0f;
 
 		static constexpr float CAMERA_NEAR_PLANE = 0.1f;
 		static constexpr float CAMERA_FAR_PLANE = 50.0f;
