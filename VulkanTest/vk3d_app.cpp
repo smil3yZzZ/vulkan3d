@@ -51,7 +51,7 @@ namespace vk3d {
 		Vk3dSwapChain::CompositionUbo compositionUbo{};
 
 		viewerObject.transform.translation = compositionUbo.lightPosition;
-		viewerObject.transform.rotation.x = glm::radians(-90.0f);
+		//viewerObject.transform.rotation.y = glm::radians(90.0f);
 		//viewerObject.transform.rotation.y = 0.75f;
 		
 		lightObject.transform.translation = compositionUbo.lightPosition;
@@ -64,48 +64,40 @@ namespace vk3d {
 		//light.setViewDirection();
 		//light.setViewTarget(compositionUbo.lightPosition, glm::vec3(1.0f, 0.0f, 0.0f));
 		float aspect = lveRenderer.getShadowAspectRatio();
-		light.setPerspectiveProjection(glm::radians(60.0f), aspect, LIGHT_NEAR_PLANE, LIGHT_FAR_PLANE);
+		light.setPerspectiveProjection(glm::radians(90.0f), aspect, LIGHT_NEAR_PLANE, LIGHT_FAR_PLANE);
 
 		for (int faceIndex = 0; faceIndex < Vk3dSwapChain::NUM_CUBE_FACES; faceIndex++) {
 			
 			lightObject.transform.resetRotation();
+			//lightObject.transform.scale = glm::vec3{-1.f, 1.f, 1.f};
 			//lightViewMatrix = glm::translate(lightViewMatrix, compositionUbo.lightPosition);
 
 			switch (faceIndex)
 			{
 			case 0: // POSITIVE_X
 				lightObject.transform.rotation.y = glm::radians(90.0f);
-				//lightViewMatrix = glm::lookAt(compositionUbo.lightPosition, compositionUbo.lightPosition + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
-				//lightViewMatrix = glm::rotate(lightViewMatrix, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-				//lightViewMatrix = glm::rotate(lightViewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+
+				//lightObject.transform.rotation.x = glm::radians(180.0f);
 				break;
 			case 1:	// NEGATIVE_X
 				lightObject.transform.rotation.y = glm::radians(-90.0f);
-				//lightViewMatrix = glm::lookAt(compositionUbo.lightPosition, compositionUbo.lightPosition + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
-				//lightViewMatrix = glm::rotate(lightViewMatrix, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-				//lightViewMatrix = glm::rotate(lightViewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+
+				//lightObject.transform.rotation.x = glm::radians(180.0f);
 				break;
 			case 2:	// POSITIVE_Y
 				lightObject.transform.rotation.x = glm::radians(-90.0f);
-				//lightObject.transform.rotation.y = glm::radians(180.0f);
-				//lightViewMatrix = glm::lookAt(compositionUbo.lightPosition, compositionUbo.lightPosition + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, 1.0));
-				//lightViewMatrix = glm::rotate(lightViewMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+				//lightObject.transform.rotation.z = glm::radians(90.0f);
 				break;
 			case 3:	// NEGATIVE_Y
 				lightObject.transform.rotation.x = glm::radians(90.0f);
-				//lightObject.transform.rotation.y = glm::radians(180.0f);
-				//lightViewMatrix = glm::lookAt(compositionUbo.lightPosition, compositionUbo.lightPosition + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, -1.0));
-				//lightViewMatrix = glm::rotate(lightViewMatrix, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+				//lightObject.transform.rotation.z = glm::radians(90.0f);
 				break;
 			case 4:	// POSITIVE_Z
-				lightObject.transform.rotation.y = glm::radians(0.f);
-				//lightViewMatrix = glm::lookAt(compositionUbo.lightPosition, compositionUbo.lightPosition + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, 1.0, 0.0));
-				//lightViewMatrix = glm::rotate(lightViewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+				//lightObject.transform.rotation.x = glm::radians(180.0f);
 				break;
 			case 5:	// NEGATIVE_Z
+				//lightObject.transform.rotation.y = glm::radians(180.0f);
 				lightObject.transform.rotation.y = glm::radians(180.0f);
-				//lightViewMatrix = glm::lookAt(compositionUbo.lightPosition, compositionUbo.lightPosition + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, 1.0, 0.0));
-				//lightViewMatrix = glm::rotate(lightViewMatrix, glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 				break;
 			}
 			light.setViewYXZ(lightObject.transform.translation, lightObject.transform.rotation);
@@ -120,6 +112,8 @@ namespace vk3d {
 
 		compositionUbo.lightNearPlane = LIGHT_NEAR_PLANE;
 		compositionUbo.lightFarPlane = LIGHT_FAR_PLANE;
+
+		gBufferUbo.lightPosition = compositionUbo.lightPosition;
 
 		while (!lveWindow.shouldClose()) {
 			glfwPollEvents();
@@ -229,7 +223,7 @@ namespace vk3d {
 		gameModels.push_back(std::move(coloredCubeModel));
 		auto coloredCube = Vk3dGameObject::createGameObject();
 		coloredCube.model = gameModels.back();
-		coloredCube.transform.translation = { 1.f, -4.f, 1.f };
+		coloredCube.transform.translation = { 1.f, -1.f, 1.f };
 		coloredCube.transform.scale = glm::vec3(0.5f, 1.f, 0.5f);
 		gameObjects.emplace(coloredCube.getId(), std::move(coloredCube));
 

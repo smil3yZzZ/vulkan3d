@@ -74,7 +74,7 @@ namespace vk3d {
 			depthBiasConstant,
 			0.0f,
 			depthBiasSlope);
-		
+
 		lveShadowPipeline->bind(frameInfo.commandBuffer);
 
 		vkCmdBindDescriptorSets(

@@ -1,20 +1,63 @@
 #include "keyboard_movement_controller.hpp"
+#include "vk3d_swap_chain.hpp"
 #include <limits>
 
 namespace vk3d {
 	void KeyboardMovementController::moveInPlaneXZ(GLFWwindow* window, float dt, Vk3dGameObject& gameObject) {
 		glm::vec3 rotate{ 0 };
+
+		if (glfwGetKey(window, keys.cubeFacePositiveX) == GLFW_PRESS) {
+			rotate.y = glm::radians(90.0f);
+			gameObject.transform.rotation = rotate;
+			gameObject.transform.translation = Vk3dSwapChain::LIGHT_POSITION;
+			return;
+		} 
+		if (glfwGetKey(window, keys.cubeFaceNegativeX) == GLFW_PRESS) {
+			rotate.y = glm::radians(-90.0f);
+			gameObject.transform.rotation = rotate;
+			gameObject.transform.translation = Vk3dSwapChain::LIGHT_POSITION;
+			return;
+		}
+		if (glfwGetKey(window, keys.cubeFacePositiveY) == GLFW_PRESS) {
+			rotate.x = glm::radians(-90.0f);
+			gameObject.transform.rotation = rotate;
+			gameObject.transform.translation = Vk3dSwapChain::LIGHT_POSITION;
+			return;
+		}
+		if (glfwGetKey(window, keys.cubeFaceNegativeY) == GLFW_PRESS) {
+			rotate.x = glm::radians(90.0f);
+			gameObject.transform.rotation = rotate;
+			gameObject.transform.translation = Vk3dSwapChain::LIGHT_POSITION;
+			return;
+		}
+		if (glfwGetKey(window, keys.cubeFacePositiveZ) == GLFW_PRESS) {
+			gameObject.transform.rotation = rotate;
+			gameObject.transform.translation = Vk3dSwapChain::LIGHT_POSITION;
+			return;
+		}
+		if (glfwGetKey(window, keys.cubeFaceNegativeZ) == GLFW_PRESS) {
+			rotate.y = glm::radians(180.0f);
+			gameObject.transform.rotation = rotate;
+			gameObject.transform.translation = Vk3dSwapChain::LIGHT_POSITION;
+			return;
+		}
+
+
 		if (glfwGetKey(window, keys.lookRight) == GLFW_PRESS)  rotate.y += 1.f;
 		if (glfwGetKey(window, keys.lookLeft) == GLFW_PRESS)  rotate.y -= 1.f;
 		if (glfwGetKey(window, keys.lookUp) == GLFW_PRESS)  rotate.x += 1.f;
 		if (glfwGetKey(window, keys.lookDown) == GLFW_PRESS)  rotate.x -= 1.f;
+		if (glfwGetKey(window, keys.rotateZRight) == GLFW_PRESS)  rotate.z += 1.f;
+		if (glfwGetKey(window, keys.rotateZLeft) == GLFW_PRESS)  rotate.z -= 1.f;
 
 		if (glm::dot(rotate, rotate) > std::numeric_limits<float>::epsilon()) {
 			gameObject.transform.rotation += lookSpeed * dt * glm::normalize(rotate);
 		}
 
-		gameObject.transform.rotation.x = glm::clamp(gameObject.transform.rotation.x, glm::radians(-90.f), glm::radians(90.f));
+		//gameObject.transform.rotation.x = glm::clamp(gameObject.transform.rotation.x, glm::radians(-90.f), glm::radians(90.f));
+		gameObject.transform.rotation.x = glm::mod(gameObject.transform.rotation.x, glm::two_pi<float>());
 		gameObject.transform.rotation.y = glm::mod(gameObject.transform.rotation.y, glm::two_pi<float>());
+		gameObject.transform.rotation.z = glm::mod(gameObject.transform.rotation.z, glm::two_pi<float>());
 
 		float yaw = gameObject.transform.rotation.y;
 		const glm::vec3 forwardDir{ sin(yaw), 0.f, cos(yaw) };

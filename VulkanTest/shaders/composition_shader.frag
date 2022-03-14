@@ -2,12 +2,13 @@
 
 layout (input_attachment_index = 0, binding = 0) uniform subpassInput samplerNormal;
 layout (input_attachment_index = 1, binding = 1) uniform subpassInput samplerAlbedo;
-layout (input_attachment_index = 2, binding = 2) uniform subpassInput samplerPositionDepth;
-layout (binding = 4) uniform samplerCube samplerShadowCube;
+layout (input_attachment_index = 2, binding = 2) uniform subpassInput samplerDistToLight;
+layout (input_attachment_index = 3, binding = 3) uniform subpassInput samplerPositionDepth;
+layout (binding = 5) uniform samplerCube samplerShadowCube;
 
 layout (location = 0) out vec4 outColor;
 
-layout(set = 0, binding = 3) uniform CompositionUbo {
+layout(set = 0, binding = 4) uniform CompositionUbo {
 	vec3 viewPos;
 	vec4 ambientLightColor; //w is intensity
 	vec3 lightPosition;
@@ -23,7 +24,7 @@ layout(push_constant) uniform Push {
 
 const float specularStrength = 0.5;
 const float shininess = 1;
-const float EPSILON = 0.30;
+const float EPSILON = 0.15;
 
 /*
 float shadowCalculation(vec3 lightProjCoords)
@@ -52,6 +53,8 @@ float shadowCalculation(vec3 lightProjCoords)
 
 void main() {
 	
+	//vec3 inLightDir = subpassLoad(samplerDistToLight).xyz;
+
 	// Read previous pass shadow depth & G-Buffer values from previous sub pass
 	vec2 clipXY = gl_FragCoord.xy * push.invResolution * 2.0 - 1.0;
 	vec4 clipScene = vec4(clipXY, subpassLoad(samplerPositionDepth).x, 1.0);
@@ -64,7 +67,7 @@ void main() {
 	float dist    = length(inLightDir);
     vec3 lightDir = inLightDir / dist;
 
-	float depth = texture(samplerShadowCube, lightDir).r;
+	float depth = texture(samplerShadowCube, vec3(lightDir.x, -lightDir.y, lightDir.z)).r;
 	float shadow = dist < (depth + EPSILON) ? 0.0 : 0.5;
 
 	vec4 worldPos = texture(samplerShadowCube, lightDir).rgba;
@@ -108,6 +111,6 @@ void main() {
 	
 	outColor = vec4((diffuseLight + (1.0 - shadow) * ambientLight + specularLight) * fragColor.xyz, fragColor.a);
 	//outColor = vec4(dist, depth, visibleFragment, 1.0);
-	//outColor = vec4(fragPosWorld, 1.0);
+	//outColor = vec4(lightDir, 1.0);
 	//outColor = vec4(fragPosWorld, 1.0);
 }

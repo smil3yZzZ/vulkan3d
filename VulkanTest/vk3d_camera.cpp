@@ -53,16 +53,16 @@ namespace vk3d {
 		setViewDirection(position, target - position, up);
 	}
 
-	void Vk3dCamera::setViewYXZ(glm::vec3 position, glm::vec3 rotation) {
+	void Vk3dCamera::setViewYXZ(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale) {
 		const float c3 = glm::cos(rotation.z);
 		const float s3 = glm::sin(rotation.z);
 		const float c2 = glm::cos(rotation.x);
 		const float s2 = glm::sin(rotation.x);
 		const float c1 = glm::cos(rotation.y);
 		const float s1 = glm::sin(rotation.y);
-		const glm::vec3 u{ (c1 * c3 + s1 * s2 * s3), (c2 * s3), (c1 * s2 * s3 - c3 * s1) };
-		const glm::vec3 v{ (c3 * s1 * s2 - c1 * s3), (c2 * c3), (c1 * c3 * s2 + s1 * s3) };
-		const glm::vec3 w{ (c2 * s1), (-s2), (c1 * c2) };
+		const glm::vec3 u{ scale.x * (c1 * c3 + s1 * s2 * s3), scale.x * (c2 * s3), scale.x * (c1 * s2 * s3 - c3 * s1) };
+		const glm::vec3 v{ scale.y * (c3 * s1 * s2 - c1 * s3), scale.y * (c2 * c3), scale.y * (c1 * c3 * s2 + s1 * s3) };
+		const glm::vec3 w{ scale.z * (c2 * s1), scale.z * (-s2), scale.z * (c1 * c2) };
 		viewMatrix = glm::mat4{ 1.f };
 		viewMatrix[0][0] = u.x;
 		viewMatrix[1][0] = u.y;

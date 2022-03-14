@@ -17,6 +17,14 @@ namespace vk3d {
 			int lookRight = GLFW_KEY_RIGHT;
 			int lookUp = GLFW_KEY_UP;
 			int lookDown = GLFW_KEY_DOWN;
+			int rotateZRight = GLFW_KEY_Z;
+			int rotateZLeft = GLFW_KEY_X;
+			int cubeFacePositiveX = GLFW_KEY_0;
+			int cubeFaceNegativeX = GLFW_KEY_1;
+			int cubeFacePositiveY = GLFW_KEY_2;
+			int cubeFaceNegativeY = GLFW_KEY_3;
+			int cubeFacePositiveZ = GLFW_KEY_4;
+			int cubeFaceNegativeZ = GLFW_KEY_5;
 		};
 
 		void moveInPlaneXZ(GLFWwindow* window, float dt, Vk3dGameObject& gameObject);

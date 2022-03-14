@@ -25,18 +25,19 @@ class Vk3dSwapChain {
  public:
      struct ShadowUbo {
          glm::mat4 projectionView[6];
-         glm::vec3 lightPosition{ 0.f, -7.f, 0.f };
+         glm::vec3 lightPosition{ LIGHT_POSITION };
      };
 
      struct GBufferUbo {
          glm::mat4 projection{ 1.f };
          glm::mat4 view{ 1.f };
+         glm::vec3 lightPosition{ LIGHT_POSITION };
      };
 
      struct CompositionUbo {
          glm::vec3 viewPos;
          alignas(16) glm::vec4 ambientLightColor{ 1.f, 1.f, 1.f, .25f }; //w is intensity
-         glm::vec3 lightPosition{ 0.f, -7.f, 0.f };
+         glm::vec3 lightPosition{ LIGHT_POSITION };
          alignas(16) glm::vec4 lightColor{ .8f, 1.f, .2f, 1.f }; // w is light intensity
          float lightNearPlane;
          float lightFarPlane;
@@ -65,16 +66,18 @@ class Vk3dSwapChain {
     };
 
     struct Attachments {
-        FrameBufferAttachment normal, albedo, depth, shadowDepth, worldPos;
+        FrameBufferAttachment normal, albedo, depth, shadowDepth, distToLight;
     };
 
   static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
-  static constexpr int SHADOW_MAP_WIDTH = 512;
-  static constexpr int SHADOW_MAP_HEIGHT = 512;
+  static constexpr int SHADOW_MAP_WIDTH = 800;
+  static constexpr int SHADOW_MAP_HEIGHT = 800;
 
   static constexpr int NUM_CUBE_FACES = 6;
-  static constexpr VkFormat SHADOW_FB_COLOR_FORMAT = VK_FORMAT_R32_SFLOAT;
+  static constexpr VkFormat SHADOW_FB_COLOR_FORMAT = VK_FORMAT_R32G32B32A32_SFLOAT;
+
+  static constexpr glm::vec3 LIGHT_POSITION = glm::vec3{ 1.f, -4.f, -4.f };
 
   static constexpr VkFilter DEFAULT_SHADOWMAP_FILTER = VK_FILTER_LINEAR;
 
