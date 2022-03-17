@@ -2,19 +2,16 @@
 
 layout (input_attachment_index = 0, binding = 0) uniform subpassInput samplerNormal;
 layout (input_attachment_index = 1, binding = 1) uniform subpassInput samplerAlbedo;
-layout (input_attachment_index = 2, binding = 2) uniform subpassInput samplerDistToLight;
-layout (input_attachment_index = 3, binding = 3) uniform subpassInput samplerPositionDepth;
-layout (binding = 5) uniform samplerCube samplerShadowCube;
+layout (input_attachment_index = 2, binding = 2) uniform subpassInput samplerPositionDepth;
+layout (binding = 4) uniform samplerCube samplerShadowCube;
 
 layout (location = 0) out vec4 outColor;
 
-layout(set = 0, binding = 4) uniform CompositionUbo {
+layout(set = 0, binding = 3) uniform CompositionUbo {
 	vec3 viewPos;
 	vec4 ambientLightColor; //w is intensity
 	vec3 lightPosition;
 	vec4 lightColor; // w is light intensity
-	float lightNearPlane;
-	float lightFarPlane;
 } ubo;
 
 layout(push_constant) uniform Push {
@@ -22,8 +19,8 @@ layout(push_constant) uniform Push {
 	vec2 invResolution;
 } push;
 
-const float specularStrength = 0.5;
-const float shininess = 1;
+const float specularStrength = 8;
+const float shininess = 32;
 const float EPSILON = 0.15;
 
 /*
@@ -63,29 +60,25 @@ void main() {
 	vec3 fragPosWorld = fragPosWorld_w.xyz / fragPosWorld_w.w;
 
 	//Calculate shadow
-	vec3 inLightDir = fragPosWorld - ubo.lightPosition;
-	float dist    = length(inLightDir);
-    vec3 lightDir = inLightDir / dist;
+	vec3 inDirToLight = fragPosWorld - ubo.lightPosition;
+	float dist    = length(inDirToLight);
 
-	float depth = texture(samplerShadowCube, vec3(lightDir.x, -lightDir.y, lightDir.z)).r;
+	float depth = texture(samplerShadowCube, vec3(inDirToLight.x, -inDirToLight.y, inDirToLight.z)).r;
 	float shadow = dist < (depth + EPSILON) ? 0.0 : 0.5;
-
-	vec4 worldPos = texture(samplerShadowCube, lightDir).rgba;
 
 	//vec4 fragPosLight_w = ubo.lightProjView * fragPosWorld_w;
 	//vec4 fragPosLight_w = subpassLoad(samplerLightSpacePosition);
 	//vec3 fragPosLight = fragPosLight_w.xyz / fragPosLight_w.w;
-	//float shadow = shadowCalculation(fragPosLight);
-	//float shadow = 0.0;
+	//float directionalShadow = shadowCalculation(fragPosLight);
 
 	vec3 normal = subpassLoad(samplerNormal).xyz;
 	vec4 fragColor = subpassLoad(samplerAlbedo);
 
 	vec3 directionToView = normalize(ubo.viewPos - fragPosWorld);
-	vec3 directionToLight = ubo.lightPosition - fragPosWorld;
+	vec3 directionToLight = normalize(-inDirToLight);
 	vec3 halfwayDirection = normalize(directionToLight + directionToView);
 
-	float attenuation = 1.0 / dot(directionToLight, directionToLight); // distance squared
+	float attenuation = 1.0 / dot(-inDirToLight, -inDirToLight); // distance squared
 
 	vec3 directionToReflection = reflect(-directionToLight, normal);  
 
@@ -95,22 +88,6 @@ void main() {
 
 	float spec = pow(max(dot(normal, halfwayDirection), 0.0), shininess);
 	vec3 specularLight = specularStrength * spec * lightColor;
-
-	float visibleFragment = 0.0;
-	
-	if (dist < depth) {
-		dist = dist/depth;
-		depth /= depth;
-		visibleFragment = 1.0;
-	}
-	else {
-		dist /= dist;
-		depth = depth/dist;
-	}
-	
 	
 	outColor = vec4((diffuseLight + (1.0 - shadow) * ambientLight + specularLight) * fragColor.xyz, fragColor.a);
-	//outColor = vec4(dist, depth, visibleFragment, 1.0);
-	//outColor = vec4(lightDir, 1.0);
-	//outColor = vec4(fragPosWorld, 1.0);
 }

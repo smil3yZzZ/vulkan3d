@@ -17,7 +17,7 @@ layout(set = 0, binding = 0) uniform GBufferUbo {
 	vec3 lightPosition;
 } gBufferUbo;
 
-layout(set = 1, binding = 4) uniform CompositionUbo {
+layout(set = 1, binding = 3) uniform CompositionUbo {
 	vec3 viewPos;
 	vec4 ambientLightColor; //w is intensity
 	vec3 lightPosition;

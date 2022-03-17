@@ -16,7 +16,7 @@ namespace vk3d {
 		static constexpr int SIERPINSKI_DEPTH = 3;
 
 		static constexpr int WIDTH = 800;
-		static constexpr int HEIGHT = 800;
+		static constexpr int HEIGHT = 600;
 		static constexpr int NUMBER_OF_TRIANGLE_VERTICES = 3;
 
 		static constexpr float MIN_SECONDS_PER_FRAME = 1.f/60.f;

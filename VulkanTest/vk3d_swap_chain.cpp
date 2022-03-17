@@ -51,14 +51,13 @@ Vk3dSwapChain::~Vk3dSwapChain() {
   for (auto& attachments : attachmentsVector) {
       destroyAttachment(&attachments.normal);
       destroyAttachment(&attachments.albedo);
-      destroyAttachment(&attachments.distToLight);
       destroyAttachment(&attachments.depth);
       destroyAttachment(&attachments.shadowDepth);
   }
   attachmentsVector.clear();
 
   for (auto& samplers : samplersVector) {
-      destroySampler(&samplers.shadowColor);
+      destroySampler(&samplers.shadowOmni);
   }
   samplersVector.clear();
   
@@ -236,7 +235,7 @@ void Vk3dSwapChain::createSwapChainImageViews() {
 }
 
 void Vk3dSwapChain::createCompositionRenderPass() {
-  std::array<VkAttachmentDescription, 5> attachments {};
+  std::array<VkAttachmentDescription, 4> attachments {};
 
   // Color attachment (swap chain)
   attachments[0].format = getSwapChainImageFormat();
@@ -266,38 +265,28 @@ void Vk3dSwapChain::createCompositionRenderPass() {
   attachments[2].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
   attachments[2].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   attachments[2].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-  // Point light distance
-  attachments[3].format = deferredResourcesFormat;
+  // Depth attachment
+  attachments[3].format = findDepthFormat();
   attachments[3].samples = VK_SAMPLE_COUNT_1_BIT;
   attachments[3].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
   attachments[3].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
   attachments[3].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
   attachments[3].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
   attachments[3].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  attachments[3].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-  // Depth attachment
-  attachments[4].format = findDepthFormat();
-  attachments[4].samples = VK_SAMPLE_COUNT_1_BIT;
-  attachments[4].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-  attachments[4].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-  attachments[4].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-  attachments[4].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-  attachments[4].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  attachments[4].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+  attachments[3].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
   // Two subpasses
   std::array<VkSubpassDescription, 2> subpassDescriptions{};
 
   // First subpass: Fill G-Buffer components
   // ----------------------------------------------------------------------------------------
-  VkAttachmentReference colorReferences[3];
+  VkAttachmentReference colorReferences[2];
   colorReferences[0] = { 1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
   colorReferences[1] = { 2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-  colorReferences[2] = { 3, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-  VkAttachmentReference depthReference = { 4, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+  VkAttachmentReference depthReference = { 3, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
   subpassDescriptions[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-  subpassDescriptions[0].colorAttachmentCount = 3;
+  subpassDescriptions[0].colorAttachmentCount = 2;
   subpassDescriptions[0].pColorAttachments = colorReferences;
   subpassDescriptions[0].pDepthStencilAttachment = &depthReference;
 
@@ -306,16 +295,15 @@ void Vk3dSwapChain::createCompositionRenderPass() {
 
   VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 
-  VkAttachmentReference inputReferences[4];
+  VkAttachmentReference inputReferences[3];
   inputReferences[0] = { 1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
   inputReferences[1] = { 2, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
   inputReferences[2] = { 3, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-  inputReferences[3] = { 4, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
 
   subpassDescriptions[1].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
   subpassDescriptions[1].colorAttachmentCount = 1;
   subpassDescriptions[1].pColorAttachments = &colorReference;
-  subpassDescriptions[1].inputAttachmentCount = 4;
+  subpassDescriptions[1].inputAttachmentCount = 3;
   subpassDescriptions[1].pInputAttachments = inputReferences;
 
 
@@ -364,7 +352,7 @@ void Vk3dSwapChain::createCompositionRenderPass() {
 void Vk3dSwapChain::createCompositionFramebuffers() {
   swapChainFramebuffers.resize(imageCount());
   for (size_t i = 0; i < imageCount(); i++) {
-    std::array<VkImageView, 5> attachments = { swapChainImageViews[i], this->attachmentsVector[i].normal.view, this->attachmentsVector[i].albedo.view, this->attachmentsVector[i].distToLight.view, this->attachmentsVector[i].depth.view };
+    std::array<VkImageView, 4> attachments = { swapChainImageViews[i], this->attachmentsVector[i].normal.view, this->attachmentsVector[i].albedo.view, this->attachmentsVector[i].depth.view };
 
     VkExtent2D swapChainExtent = getSwapChainExtent();
     VkFramebufferCreateInfo framebufferInfo = {};
@@ -395,7 +383,6 @@ void Vk3dSwapChain::createDeferredResources() {
     for (auto& attachments : attachmentsVector) {
         createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.normal, swapChainExtent, false);
         createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.albedo, swapChainExtent, false);
-        createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.distToLight, swapChainExtent, false);
         createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.depth, swapChainExtent, false);
     }   
 }
@@ -574,11 +561,10 @@ void Vk3dSwapChain::createShadowSampler() {
     VkExtent2D shadowMapExtent = getShadowMapExtent();
 
     for (auto& samplers : samplersVector) {
-        createSampler(SHADOW_FB_COLOR_FORMAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &samplers.shadowColor, shadowMapExtent, true);
+        createSampler(SHADOW_FB_COLOR_FORMAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &samplers.shadowOmni, shadowMapExtent, true);
     }
 
     for (auto& attachments: attachmentsVector) {
-        //createAttachment(VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.worldPos, shadowMapExtent, true);
         createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &attachments.shadowDepth, shadowMapExtent, true);
     }
 }
@@ -668,7 +654,7 @@ void Vk3dSwapChain::createShadowFramebuffers() {
     shadowFramebuffers.resize(imageCount());
     VkExtent2D shadowMapExtent = getShadowMapExtent();
     for (size_t i = 0; i < imageCount(); i++) {
-        std::array<VkImageView, 2> attachments = { samplersVector[i].shadowColor.attachment.view, attachmentsVector[i].shadowDepth.view};
+        std::array<VkImageView, 2> attachments = { samplersVector[i].shadowOmni.attachment.view, attachmentsVector[i].shadowDepth.view};
 
         VkFramebufferCreateInfo framebufferInfo = {};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -698,8 +684,8 @@ void Vk3dSwapChain::createDescriptorPool() {
     globalPool = Vk3dDescriptorPool::Builder(device)
         .setMaxSets(3 * imageCount())
         .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 * imageCount())
-        .addPoolSize(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 4 * imageCount())
-        .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 * imageCount())
+        .addPoolSize(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 3 * imageCount())
+        .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, imageCount())
         .build();
 }
 
@@ -759,17 +745,14 @@ void Vk3dSwapChain::createUniformBuffers() {
 
     gBufferSetLayout = Vk3dDescriptorSetLayout::Builder(device)
         .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-        .addBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
         .build();
 
     gBufferDescriptorSets.clear();
     gBufferDescriptorSets.resize(imageCount());
     for (int i = 0; i < gBufferDescriptorSets.size(); i++) {
         auto bufferInfo = gBufferUboBuffers[i]->descriptorInfo();
-        auto shadowColor = samplersVector[i].shadowColor.attachment.descriptorInfo(samplersVector[i].shadowColor.sampler);
         Vk3dDescriptorWriter(*gBufferSetLayout, *globalPool)
             .writeBuffer(0, &bufferInfo)
-            .writeImage(1, &shadowColor)
             .build(gBufferDescriptorSets[i]);
     }
 
@@ -777,9 +760,8 @@ void Vk3dSwapChain::createUniformBuffers() {
         .addBinding(0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
         .addBinding(1, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
         .addBinding(2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
-        .addBinding(3, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
-        .addBinding(4, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
-        .addBinding(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+        .addBinding(3, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+        .addBinding(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
         .build();
 
     compositionDescriptorSets.clear();
@@ -788,17 +770,15 @@ void Vk3dSwapChain::createUniformBuffers() {
     for (int i = 0; i < compositionDescriptorSets.size(); i++) {
         auto normalInfo = attachmentsVector[i].normal.descriptorInfo();
         auto albedoInfo = attachmentsVector[i].albedo.descriptorInfo();
-        auto distToLightInfo = attachmentsVector[i].distToLight.descriptorInfo();
         auto depthInfo = attachmentsVector[i].depth.descriptorInfo();
         auto bufferInfo = compositionUboBuffers[i]->descriptorInfo();
-        auto shadowColor = samplersVector[i].shadowColor.attachment.descriptorInfo(samplersVector[i].shadowColor.sampler);
+        auto shadowOmni = samplersVector[i].shadowOmni.attachment.descriptorInfo(samplersVector[i].shadowOmni.sampler);
         Vk3dDescriptorWriter(*compositionSetLayout, *globalPool)
             .writeImage(0, &normalInfo)
             .writeImage(1, &albedoInfo)
-            .writeImage(2, &distToLightInfo)
-            .writeImage(3, &depthInfo)
-            .writeBuffer(4, &bufferInfo)
-            .writeImage(5, &shadowColor)
+            .writeImage(2, &depthInfo)
+            .writeBuffer(3, &bufferInfo)
+            .writeImage(4, &shadowOmni)
             .build(compositionDescriptorSets[i]);
     }
 }

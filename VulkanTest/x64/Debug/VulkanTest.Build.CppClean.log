@@ -17,12 +17,14 @@ c:\users\holivera\source\repos\vulkantest\vulkantest\x64\debug\vk3d_buffer.obj
 c:\users\holivera\source\repos\vulkantest\vulkantest\x64\debug\vk3d_allocator.obj
 c:\users\holivera\source\repos\vulkantest\vulkantest\x64\debug\keyboard_movement_controller.obj
 c:\users\holivera\source\repos\vulkantest\vulkantest\x64\debug\vk3d_app.obj
-c:\users\holivera\source\repos\vulkantest\vulkantest\x64\debug\vulkantest.ilk
-c:\users\holivera\source\repos\vulkantest\x64\debug\vulkantest.exe
 c:\users\holivera\source\repos\vulkantest\x64\debug\vulkantest.pdb
 c:\users\holivera\source\repos\vulkantest\vulkantest\x64\debug\vulkantest.tlog\cl.command.1.tlog
 c:\users\holivera\source\repos\vulkantest\vulkantest\x64\debug\vulkantest.tlog\cl.read.1.tlog
 c:\users\holivera\source\repos\vulkantest\vulkantest\x64\debug\vulkantest.tlog\cl.write.1.tlog
+c:\users\holivera\source\repos\vulkantest\vulkantest\x64\debug\vulkantest.tlog\link-cvtres.read.1.tlog
+c:\users\holivera\source\repos\vulkantest\vulkantest\x64\debug\vulkantest.tlog\link-cvtres.write.1.tlog
+c:\users\holivera\source\repos\vulkantest\vulkantest\x64\debug\vulkantest.tlog\link-rc.read.1.tlog
+c:\users\holivera\source\repos\vulkantest\vulkantest\x64\debug\vulkantest.tlog\link-rc.write.1.tlog
 c:\users\holivera\source\repos\vulkantest\vulkantest\x64\debug\vulkantest.tlog\link.command.1.tlog
 c:\users\holivera\source\repos\vulkantest\vulkantest\x64\debug\vulkantest.tlog\link.read.1.tlog
 c:\users\holivera\source\repos\vulkantest\vulkantest\x64\debug\vulkantest.tlog\link.write.1.tlog

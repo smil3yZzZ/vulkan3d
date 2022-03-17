@@ -45,75 +45,44 @@ namespace vk3d {
 
 		auto currentTime = std::chrono::high_resolution_clock::now();
 
-		// update
 		Vk3dSwapChain::ShadowUbo shadowUbo{};
 		Vk3dSwapChain::GBufferUbo gBufferUbo{};
 		Vk3dSwapChain::CompositionUbo compositionUbo{};
 
-		viewerObject.transform.translation = compositionUbo.lightPosition;
-		//viewerObject.transform.rotation.y = glm::radians(90.0f);
-		//viewerObject.transform.rotation.y = 0.75f;
+		viewerObject.transform.translation = Vk3dSwapChain::LIGHT_POSITION;
 		
-		lightObject.transform.translation = compositionUbo.lightPosition;
-		//lightObject.transform.rotation.x = -.9f;
-		//lightObject.transform.rotation.y = 0.75f;
+		lightObject.transform.translation = Vk3dSwapChain::LIGHT_POSITION;
 
-		//light.setViewYXZ(lightObject.transform.translation, lightObject.transform.rotation);
-		//light.
-		//Light initialized to positive X
-		//light.setViewDirection();
-		//light.setViewTarget(compositionUbo.lightPosition, glm::vec3(1.0f, 0.0f, 0.0f));
 		float aspect = lveRenderer.getShadowAspectRatio();
 		light.setPerspectiveProjection(glm::radians(90.0f), aspect, LIGHT_NEAR_PLANE, LIGHT_FAR_PLANE);
 
 		for (int faceIndex = 0; faceIndex < Vk3dSwapChain::NUM_CUBE_FACES; faceIndex++) {
 			
 			lightObject.transform.resetRotation();
-			//lightObject.transform.scale = glm::vec3{-1.f, 1.f, 1.f};
-			//lightViewMatrix = glm::translate(lightViewMatrix, compositionUbo.lightPosition);
 
 			switch (faceIndex)
 			{
 			case 0: // POSITIVE_X
 				lightObject.transform.rotation.y = glm::radians(90.0f);
-
-				//lightObject.transform.rotation.x = glm::radians(180.0f);
 				break;
 			case 1:	// NEGATIVE_X
 				lightObject.transform.rotation.y = glm::radians(-90.0f);
-
-				//lightObject.transform.rotation.x = glm::radians(180.0f);
 				break;
 			case 2:	// POSITIVE_Y
-				lightObject.transform.rotation.x = glm::radians(-90.0f);
-				//lightObject.transform.rotation.z = glm::radians(90.0f);
+				lightObject.transform.rotation.x = glm::radians(90.0f);
 				break;
 			case 3:	// NEGATIVE_Y
-				lightObject.transform.rotation.x = glm::radians(90.0f);
-				//lightObject.transform.rotation.z = glm::radians(90.0f);
+				lightObject.transform.rotation.x = glm::radians(-90.0f);
 				break;
 			case 4:	// POSITIVE_Z
-				//lightObject.transform.rotation.x = glm::radians(180.0f);
 				break;
 			case 5:	// NEGATIVE_Z
-				//lightObject.transform.rotation.y = glm::radians(180.0f);
 				lightObject.transform.rotation.y = glm::radians(180.0f);
 				break;
 			}
 			light.setViewYXZ(lightObject.transform.translation, lightObject.transform.rotation);
 			shadowUbo.projectionView[faceIndex] = light.getProjection() * light.getView();
 		}
-
-		//glm::mat4 lightProjView = light.getProjection() * light.getView();
-		//glm::mat4 lightProjView = light.getProjection() * lightViewMatrix;
-		
-		//gBufferUbo.lightProjectionView = lightProjView;
-		shadowUbo.lightPosition = compositionUbo.lightPosition;
-
-		compositionUbo.lightNearPlane = LIGHT_NEAR_PLANE;
-		compositionUbo.lightFarPlane = LIGHT_FAR_PLANE;
-
-		gBufferUbo.lightPosition = compositionUbo.lightPosition;
 
 		while (!lveWindow.shouldClose()) {
 			glfwPollEvents();
@@ -188,7 +157,7 @@ namespace vk3d {
 		right.model = gameModels.back();
 		right.transform.translation = { 9.f, -9.f, 0.f };
 		right.transform.scale = glm::vec3(9.f, 1.f, 9.f);
-		right.transform.rotation = glm::vec3(0.f, 0.f, glm::radians(90.0f));
+		right.transform.rotation = glm::vec3(0.f, 0.f, glm::radians(-90.0f));
 		gameObjects.emplace(right.getId(), std::move(right));
 
 		auto front = Vk3dGameObject::createGameObject();
@@ -209,13 +178,14 @@ namespace vk3d {
 		back.model = gameModels.back();
 		back.transform.translation = { 0.f, -9.f, -9.f };
 		back.transform.scale = glm::vec3(9.f, 1.f, 9.f);
-		back.transform.rotation = glm::vec3(glm::radians(90.0f), 0.f, 0.f);
+		back.transform.rotation = glm::vec3(glm::radians(-90.0f), 0.f, 0.f);
 		gameObjects.emplace(back.getId(), std::move(back));
 
 		auto top = Vk3dGameObject::createGameObject();
 		top.model = gameModels.back();
 		top.transform.translation = { 0.f, -18.f, 0.f };
 		top.transform.scale = glm::vec3(9.f, 1.f, 9.f);
+		top.transform.rotation = glm::vec3(glm::radians(180.0f), 0.f, 0.f);
 		gameObjects.emplace(top.getId(), std::move(top));
 		
 

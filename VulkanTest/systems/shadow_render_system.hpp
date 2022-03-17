@@ -14,9 +14,9 @@ namespace vk3d {
 	class ShadowRenderSystem {
 	public:
 		// Constant depth bias factor (always applied)
-		static constexpr float depthBiasConstant = 1.75f;
+		static constexpr float depthBiasConstant = 1.25f;
 		// Slope depth bias factor, applied depending on polygon's slope
-		static constexpr float depthBiasSlope = 1.5f;
+		static constexpr float depthBiasSlope = 1.f;
 
 		ShadowRenderSystem(Vk3dDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout shadowSetLayout);
 		~ShadowRenderSystem();
