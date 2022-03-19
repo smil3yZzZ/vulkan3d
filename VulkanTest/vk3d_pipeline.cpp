@@ -8,14 +8,14 @@
 #include <cassert>
 
 namespace vk3d {
-	Vk3dPipeline::Vk3dPipeline(Vk3dDevice& device, const std::string& vertFilepath, const std::string& fragFilepath, const PipelineConfigInfo& configInfo) : lveDevice (device){
+	Vk3dPipeline::Vk3dPipeline(Vk3dDevice& device, const std::string& vertFilepath, const std::string& fragFilepath, const PipelineConfigInfo& configInfo) : vk3dDevice (device){
 		createGraphicsPipeline(vertFilepath, fragFilepath, configInfo);
 	}
 
 	Vk3dPipeline::~Vk3dPipeline() {
-		vkDestroyShaderModule(lveDevice.device(), vertShaderModule, nullptr);
-		vkDestroyShaderModule(lveDevice.device(), fragShaderModule, nullptr);
-		vkDestroyPipeline(lveDevice.device(), graphicsPipeline, nullptr);
+		vkDestroyShaderModule(vk3dDevice.device(), vertShaderModule, nullptr);
+		vkDestroyShaderModule(vk3dDevice.device(), fragShaderModule, nullptr);
+		vkDestroyPipeline(vk3dDevice.device(), graphicsPipeline, nullptr);
 	}
 
 	std::vector<char> Vk3dPipeline::readFile(const std::string& filepath) {
@@ -91,7 +91,7 @@ namespace vk3d {
 		pipelineInfo.basePipelineIndex = -1;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-		if (vkCreateGraphicsPipelines(lveDevice.device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
+		if (vkCreateGraphicsPipelines(vk3dDevice.device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create graphics pipeline");
 		}
 	}
@@ -102,7 +102,7 @@ namespace vk3d {
 		createInfo.codeSize = code.size();
 		createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
-		if (vkCreateShaderModule(lveDevice.device(), &createInfo, nullptr, shaderModule) != VK_SUCCESS) {
+		if (vkCreateShaderModule(vk3dDevice.device(), &createInfo, nullptr, shaderModule) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create shader module");
 		}
 

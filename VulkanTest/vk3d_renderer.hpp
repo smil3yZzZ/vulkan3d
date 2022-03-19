@@ -19,12 +19,13 @@ namespace vk3d {
 		Vk3dRenderer(const Vk3dRenderer&) = delete;
 		Vk3dRenderer& operator=(const Vk3dRenderer&) = delete;
 
-		VkRenderPass getSwapChainRenderPass() const { return lveSwapChain->getRenderPass(); }
-		VkRenderPass getShadowRenderPass() const { return lveSwapChain->getShadowRenderPass(); }
-		float getAspectRatio() const { return lveSwapChain->extentAspectRatio(); };
-		float getShadowAspectRatio() const { return lveSwapChain->shadowExtentAspectRatio(); };
-		VkExtent2D getExtent() const { return lveSwapChain->getSwapChainExtent(); };
-		std::vector<Vk3dSwapChain::Attachments> getSwapChainAttachments() { return lveSwapChain->getAttachments(); };
+		VkRenderPass getSwapChainRenderPass() const { return vk3dSwapChain->getRenderPass(); }
+		VkRenderPass getShadowRenderPass() const { return vk3dSwapChain->getShadowRenderPass(); }
+		VkRenderPass getReflectionsRenderPass() const { return vk3dSwapChain->getReflectionsRenderPass(); }
+		float getAspectRatio() const { return vk3dSwapChain->extentAspectRatio(); };
+		float getShadowAspectRatio() const { return vk3dSwapChain->shadowExtentAspectRatio(); };
+		VkExtent2D getExtent() const { return vk3dSwapChain->getSwapChainExtent(); };
+		std::vector<Vk3dSwapChain::Attachments> getSwapChainAttachments() { return vk3dSwapChain->getAttachments(); };
 		bool isFrameInProgress() const { return isFrameStarted; }
 
 		VkCommandBuffer getCurrentCommandBuffer() const {
@@ -37,7 +38,7 @@ namespace vk3d {
 			return currentFrameIndex;
 		}
 
-		size_t getCurrentFrame() { return lveSwapChain->getCurrentFrame(); }
+		size_t getCurrentFrame() { return vk3dSwapChain->getCurrentFrame(); }
 		size_t getCurrentImageIndex() { return currentImageIndex; }
 
 		VkCommandBuffer beginFrame();
@@ -46,26 +47,31 @@ namespace vk3d {
 		void endShadowRenderPass(VkCommandBuffer commandBuffer);
 		void beginSwapChainRenderPass(VkCommandBuffer commandBuffer);
 		void endSwapChainRenderPass(VkCommandBuffer commandBuffer);
+		void beginReflectionsRenderPass(VkCommandBuffer commandBuffer);
+		void endReflectionsRenderPass(VkCommandBuffer commandBuffer);
 
-		VkDescriptorSetLayout getShadowDescriptorSetLayout() { return lveSwapChain->getShadowDescriptorSetLayout(); };
-		VkDescriptorSetLayout getGBufferDescriptorSetLayout() { return lveSwapChain->getGBufferDescriptorSetLayout(); };
-		VkDescriptorSetLayout getCompositionDescriptorSetLayout() { return lveSwapChain->getCompositionDescriptorSetLayout(); };
-		VkDescriptorSet getCurrentShadowDescriptorSet() { return lveSwapChain->getCurrentShadowDescriptorSet(currentImageIndex); };
-		VkDescriptorSet getCurrentGBufferDescriptorSet() { return lveSwapChain->getCurrentGBufferDescriptorSet(currentImageIndex); };
-		VkDescriptorSet getCurrentCompositionDescriptorSet() { return lveSwapChain->getCurrentCompositionDescriptorSet(currentImageIndex);};
-		void updateCurrentShadowUbo(void* data) { return lveSwapChain->updateCurrentShadowUbo(data, currentImageIndex); };
-		void updateCurrentGBufferUbo(void* data) { return lveSwapChain->updateCurrentGBufferUbo(data, currentImageIndex); };
-		void updateCurrentCompositionUbo(void* data) { return lveSwapChain->updateCurrentCompositionUbo(data, currentImageIndex); };
+		VkDescriptorSetLayout getShadowDescriptorSetLayout() { return vk3dSwapChain->getShadowDescriptorSetLayout(); };
+		VkDescriptorSetLayout getGBufferDescriptorSetLayout() { return vk3dSwapChain->getGBufferDescriptorSetLayout(); };
+		VkDescriptorSetLayout getCompositionDescriptorSetLayout() { return vk3dSwapChain->getCompositionDescriptorSetLayout(); };
+		VkDescriptorSetLayout getReflectionsDescriptorSetLayout() { return vk3dSwapChain->getReflectionsDescriptorSetLayout(); };
+		VkDescriptorSet getCurrentShadowDescriptorSet() { return vk3dSwapChain->getCurrentShadowDescriptorSet(currentImageIndex); };
+		VkDescriptorSet getCurrentGBufferDescriptorSet() { return vk3dSwapChain->getCurrentGBufferDescriptorSet(currentImageIndex); };
+		VkDescriptorSet getCurrentCompositionDescriptorSet() { return vk3dSwapChain->getCurrentCompositionDescriptorSet(currentImageIndex);};
+		VkDescriptorSet getCurrentReflectionsDescriptorSet() { return vk3dSwapChain->getCurrentReflectionsDescriptorSet(currentImageIndex); };
+		void updateCurrentShadowUbo(void* data) { return vk3dSwapChain->updateCurrentShadowUbo(data, currentImageIndex); };
+		void updateCurrentGBufferUbo(void* data) { return vk3dSwapChain->updateCurrentGBufferUbo(data, currentImageIndex); };
+		void updateCurrentCompositionUbo(void* data) { return vk3dSwapChain->updateCurrentCompositionUbo(data, currentImageIndex); };
+		void updateCurrentReflectionsUbo(void* data) { return vk3dSwapChain->updateCurrentReflectionsUbo(data, currentImageIndex); };
 
 	private:
 		void createCommandBuffers();
 		void freeCommandBuffers();
 		void recreateSwapChain();
 
-		Vk3dWindow& lveWindow;
-		Vk3dDevice& lveDevice;
-		Vk3dAllocator& lveAllocator;
-		std::unique_ptr<Vk3dSwapChain> lveSwapChain;
+		Vk3dWindow& vk3dWindow;
+		Vk3dDevice& vk3dDevice;
+		Vk3dAllocator& vk3dAllocator;
+		std::unique_ptr<Vk3dSwapChain> vk3dSwapChain;
 		std::vector<VkCommandBuffer> commandBuffers;
 
 		uint32_t currentImageIndex;

@@ -30,10 +30,10 @@ namespace vk3d {
 		void createShadowPipelineLayout(VkDescriptorSetLayout shadowSetLayout);
 		void createShadowPipeline(VkRenderPass renderPass);
 
-		Vk3dDevice& lveDevice;
+		Vk3dDevice& vk3dDevice;
 
-		Vk3dAllocator lveAllocator{ lveDevice };
-		std::unique_ptr<Vk3dPipeline> lveShadowPipeline;
+		Vk3dAllocator vk3dAllocator{ vk3dDevice };
+		std::unique_ptr<Vk3dPipeline> vk3dShadowPipeline;
 		VkPipelineLayout shadowPipelineLayout;
 	};
 }

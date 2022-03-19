@@ -155,6 +155,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="systems\reflections_render_system.cpp" />
     <ClCompile Include="vk3d_app.cpp" />
     <ClCompile Include="keyboard_movement_controller.cpp" />
     <ClCompile Include="vk3d_allocator.cpp" />
@@ -174,6 +175,7 @@
     <ClCompile Include="systems\simple_render_system.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="systems\reflections_render_system.hpp" />
     <ClInclude Include="vk3d_app.hpp" />
     <ClInclude Include="keyboard_movement_controller.hpp" />
     <ClInclude Include="vk3d_allocator.hpp" />
@@ -202,10 +204,10 @@
     <None Include="shaders\gbuffer_shader.vert" />
     <None Include="shaders\point_light.frag" />
     <None Include="shaders\point_light.vert" />
+    <None Include="shaders\reflections_shader.frag" />
+    <None Include="shaders\reflections_shader.vert" />
     <None Include="shaders\shadow_shader.frag" />
     <None Include="shaders\shadow_shader.vert" />
-    <None Include="shaders\simple_shader.frag" />
-    <None Include="shaders\simple_shader.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -4,6 +4,7 @@
 #include "vk3d_camera.hpp"
 #include "systems/shadow_render_system.hpp"
 #include "systems/simple_render_system.hpp"
+#include "systems/reflections_render_system.hpp"
 #include "systems/point_light_system.hpp"
 
 #include <math.h>
@@ -31,9 +32,10 @@ namespace vk3d {
 	}
 
 	void Vk3dApp::run() {
-		ShadowRenderSystem shadowRenderSystem{ lveDevice, lveRenderer.getShadowRenderPass(), lveRenderer.getShadowDescriptorSetLayout() };
-		SimpleRenderSystem simpleRenderSystem{lveDevice, lveRenderer.getSwapChainRenderPass(), lveRenderer.getGBufferDescriptorSetLayout(), lveRenderer.getCompositionDescriptorSetLayout() };
-		PointLightSystem pointLightSystem{ lveDevice, lveRenderer.getSwapChainRenderPass(), lveRenderer.getGBufferDescriptorSetLayout(), lveRenderer.getCompositionDescriptorSetLayout() };
+		ShadowRenderSystem shadowRenderSystem{ vk3dDevice, vk3dRenderer.getShadowRenderPass(), vk3dRenderer.getShadowDescriptorSetLayout() };
+		ReflectionsRenderSystem reflectionsRenderSystem{ vk3dDevice, vk3dRenderer.getReflectionsRenderPass(), vk3dRenderer.getReflectionsDescriptorSetLayout() };
+		SimpleRenderSystem simpleRenderSystem{vk3dDevice, vk3dRenderer.getSwapChainRenderPass(), vk3dRenderer.getGBufferDescriptorSetLayout(), vk3dRenderer.getCompositionDescriptorSetLayout() };
+		PointLightSystem pointLightSystem{ vk3dDevice, vk3dRenderer.getSwapChainRenderPass(), vk3dRenderer.getGBufferDescriptorSetLayout(), vk3dRenderer.getCompositionDescriptorSetLayout() };
 		Vk3dCamera camera{};
 		Vk3dCamera light{};
 
@@ -48,12 +50,13 @@ namespace vk3d {
 		Vk3dSwapChain::ShadowUbo shadowUbo{};
 		Vk3dSwapChain::GBufferUbo gBufferUbo{};
 		Vk3dSwapChain::CompositionUbo compositionUbo{};
+		Vk3dSwapChain::ReflectionsUbo reflectionsUbo{};
 
 		viewerObject.transform.translation = Vk3dSwapChain::LIGHT_POSITION;
 		
 		lightObject.transform.translation = Vk3dSwapChain::LIGHT_POSITION;
 
-		float aspect = lveRenderer.getShadowAspectRatio();
+		float aspect = vk3dRenderer.getShadowAspectRatio();
 		light.setPerspectiveProjection(glm::radians(90.0f), aspect, LIGHT_NEAR_PLANE, LIGHT_FAR_PLANE);
 
 		for (int faceIndex = 0; faceIndex < Vk3dSwapChain::NUM_CUBE_FACES; faceIndex++) {
@@ -84,7 +87,7 @@ namespace vk3d {
 			shadowUbo.projectionView[faceIndex] = light.getProjection() * light.getView();
 		}
 
-		while (!lveWindow.shouldClose()) {
+		while (!vk3dWindow.shouldClose()) {
 			glfwPollEvents();
 
 			auto newTime = std::chrono::high_resolution_clock::now();
@@ -94,58 +97,69 @@ namespace vk3d {
 			//Limit frameTime to avoid resizing delay
 			frameTime = glm::min(frameTime, MIN_SECONDS_PER_FRAME);
 			
-			cameraController.moveInPlaneXZ(lveWindow.getGLFWwindow(), frameTime, viewerObject);
+			cameraController.moveInPlaneXZ(vk3dWindow.getGLFWwindow(), frameTime, viewerObject);
 			camera.setViewYXZ(viewerObject.transform.translation, viewerObject.transform.rotation);
 
-			float aspect = lveRenderer.getAspectRatio();
+			float aspect = vk3dRenderer.getAspectRatio();
 			camera.setPerspectiveProjection(glm::radians(50.0f), aspect, CAMERA_NEAR_PLANE, CAMERA_FAR_PLANE);
 
-			if (auto commandBuffer = lveRenderer.beginFrame()) {
-				int frameIndex = lveRenderer.getFrameIndex();
+			if (auto commandBuffer = vk3dRenderer.beginFrame()) {
+				int frameIndex = vk3dRenderer.getFrameIndex();
 
 				FrameInfo frameInfo{
 					frameIndex,
 					frameTime,
 					commandBuffer,
 					camera,
-					lveRenderer.getCurrentShadowDescriptorSet(),
-					lveRenderer.getCurrentGBufferDescriptorSet(),
-					lveRenderer.getCurrentCompositionDescriptorSet(),
+					vk3dRenderer.getCurrentShadowDescriptorSet(),
+					vk3dRenderer.getCurrentReflectionsDescriptorSet(),
+					vk3dRenderer.getCurrentGBufferDescriptorSet(),
+					vk3dRenderer.getCurrentCompositionDescriptorSet(),
 					gameObjects
 				};
 
-				lveRenderer.updateCurrentShadowUbo(&shadowUbo);
+				vk3dRenderer.updateCurrentShadowUbo(&shadowUbo);
 				
 				gBufferUbo.projection = camera.getProjection();
 				gBufferUbo.view = camera.getView();
 
-				lveRenderer.updateCurrentGBufferUbo(&gBufferUbo);
+				vk3dRenderer.updateCurrentGBufferUbo(&gBufferUbo);
+
+				reflectionsUbo.projection = camera.getProjection();
+				reflectionsUbo.view = camera.getView();
+
+				vk3dRenderer.updateCurrentReflectionsUbo(&reflectionsUbo);
 
 				compositionUbo.viewPos = viewerObject.transform.translation;
 
-				lveRenderer.updateCurrentCompositionUbo(&compositionUbo);
+				vk3dRenderer.updateCurrentCompositionUbo(&compositionUbo);
 
 				// render shadows
-				lveRenderer.beginShadowRenderPass(commandBuffer);
+				vk3dRenderer.beginShadowRenderPass(commandBuffer);
 				shadowRenderSystem.renderGameObjects(frameInfo);
-				lveRenderer.endShadowRenderPass(commandBuffer);
+				vk3dRenderer.endShadowRenderPass(commandBuffer);
+
+				// render reflection maps
+				vk3dRenderer.beginReflectionsRenderPass(commandBuffer);
+				reflectionsRenderSystem.renderGameObjects(frameInfo);
+				vk3dRenderer.endReflectionsRenderPass(commandBuffer);
 
 				// render swap chain
-				lveRenderer.beginSwapChainRenderPass(commandBuffer);
-				VkExtent2D extent = lveRenderer.getExtent();
+				vk3dRenderer.beginSwapChainRenderPass(commandBuffer);
+				VkExtent2D extent = vk3dRenderer.getExtent();
 				simpleRenderSystem.renderGameObjects(frameInfo, glm::inverse(camera.getProjection() * camera.getView()), glm::vec2(1.f/extent.width, 1.f/extent.height));
 				pointLightSystem.render(frameInfo);
-				lveRenderer.endSwapChainRenderPass(commandBuffer);
-				lveRenderer.endFrame();
+				vk3dRenderer.endSwapChainRenderPass(commandBuffer);
+				vk3dRenderer.endFrame();
 			}
 		}
-		vkDeviceWaitIdle(lveDevice.device());
+		vkDeviceWaitIdle(vk3dDevice.device());
 	}
 
 	void Vk3dApp::loadGameObjects() {
 
 		
-		std::shared_ptr<Vk3dModel> quadModel = Vk3dModel::createModelFromFile(lveDevice, "models/quad.obj", lveAllocator);
+		std::shared_ptr<Vk3dModel> quadModel = Vk3dModel::createModelFromFile(vk3dDevice, "models/quad.obj", vk3dAllocator);
 		gameModels.push_back(std::move(quadModel));
 		auto floor = Vk3dGameObject::createGameObject();
 		floor.model = gameModels.back();
@@ -189,7 +203,7 @@ namespace vk3d {
 		gameObjects.emplace(top.getId(), std::move(top));
 		
 
-		std::shared_ptr<Vk3dModel> coloredCubeModel = Vk3dModel::createModelFromFile(lveDevice, "models/colored_cube.obj", lveAllocator);
+		std::shared_ptr<Vk3dModel> coloredCubeModel = Vk3dModel::createModelFromFile(vk3dDevice, "models/colored_cube.obj", vk3dAllocator);
 		gameModels.push_back(std::move(coloredCubeModel));
 		auto coloredCube = Vk3dGameObject::createGameObject();
 		coloredCube.model = gameModels.back();
@@ -208,14 +222,6 @@ namespace vk3d {
 		coloredCube3.transform.translation = { .5f, -1.f, 3.f };
 		coloredCube3.transform.scale = glm::vec3(0.5f, 1.f, 0.5f);
 		gameObjects.emplace(coloredCube3.getId(), std::move(coloredCube3));
-
-		/*
-		auto coloredCube4 = Vk3dGameObject::createGameObject();
-		coloredCube4.model = gameModels.back();
-		coloredCube4.transform.translation = { 0.f, -1.f, -2.f };
-		coloredCube4.transform.scale = glm::vec3(7.f, 7.f, 7.f);
-		gameObjects.emplace(coloredCube4.getId(), std::move(coloredCube4));
-		*/
 
 	}
 

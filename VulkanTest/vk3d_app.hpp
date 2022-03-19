@@ -38,10 +38,10 @@ namespace vk3d {
 		void loadGameObjects();
 		void updateModels(int powIteration);
 
-		Vk3dWindow lveWindow{WIDTH, HEIGHT, "Hello Vulkan!"};
-		Vk3dDevice lveDevice{ lveWindow };
-		Vk3dAllocator lveAllocator{ lveDevice };
-		Vk3dRenderer lveRenderer{ lveWindow, lveDevice, lveAllocator};
+		Vk3dWindow vk3dWindow{WIDTH, HEIGHT, "Hello Vulkan!"};
+		Vk3dDevice vk3dDevice{ vk3dWindow };
+		Vk3dAllocator vk3dAllocator{ vk3dDevice };
+		Vk3dRenderer vk3dRenderer{ vk3dWindow, vk3dDevice, vk3dAllocator};
 
 		// note: order of declarations matters
 

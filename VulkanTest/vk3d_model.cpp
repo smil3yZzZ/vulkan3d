@@ -28,7 +28,7 @@ namespace std {
 }
 
 namespace vk3d {
-	Vk3dModel::Vk3dModel(Vk3dDevice& device, const Vk3dModel::Builder& builder, Vk3dAllocator& allocator) : lveDevice (device), lveAllocator (allocator){
+	Vk3dModel::Vk3dModel(Vk3dDevice& device, const Vk3dModel::Builder& builder, Vk3dAllocator& allocator) : vk3dDevice (device), vk3dAllocator (allocator){
 		createVertexBuffers(builder.vertices);
 		createIndexBuffers(builder.indices);
 	}
@@ -49,28 +49,28 @@ namespace vk3d {
 		uint32_t vertexSize = sizeof(vertices[0]);
 
 		Vk3dBuffer stagingBuffer{
-			lveDevice,
+			vk3dDevice,
 			vertexSize,
 			vertexCount,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VMA_MEMORY_USAGE_CPU_ONLY,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			lveAllocator,
+			vk3dAllocator,
 		};
 
 		stagingBuffer.map();
 		stagingBuffer.writeToBuffer((void *)vertices.data());
 
 		vertexBuffer = std::make_unique<Vk3dBuffer>(
-			lveDevice,
+			vk3dDevice,
 			vertexSize,
 			vertexCount,
 			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			VMA_MEMORY_USAGE_GPU_ONLY,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			lveAllocator);
+			vk3dAllocator);
 
-		lveDevice.copyBuffer(stagingBuffer.getBuffer(), vertexBuffer->getBuffer(), bufferSize);
+		vk3dDevice.copyBuffer(stagingBuffer.getBuffer(), vertexBuffer->getBuffer(), bufferSize);
 	}
 
 	void Vk3dModel::createIndexBuffers(const std::vector<uint32_t>& indices) {
@@ -85,28 +85,28 @@ namespace vk3d {
 		uint32_t indexSize = sizeof(indices[0]);
 
 		Vk3dBuffer stagingBuffer{
-			lveDevice,
+			vk3dDevice,
 			indexSize,
 			indexCount,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VMA_MEMORY_USAGE_CPU_ONLY,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			lveAllocator,
+			vk3dAllocator,
 		};
 
 		stagingBuffer.map();
 		stagingBuffer.writeToBuffer((void *)indices.data());
 
 		indexBuffer = std::make_unique<Vk3dBuffer>(
-			lveDevice,
+			vk3dDevice,
 			indexSize,
 			indexCount,
 			VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			VMA_MEMORY_USAGE_GPU_ONLY,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			lveAllocator);
+			vk3dAllocator);
 
-		lveDevice.copyBuffer(stagingBuffer.getBuffer(), indexBuffer->getBuffer(), bufferSize);
+		vk3dDevice.copyBuffer(stagingBuffer.getBuffer(), indexBuffer->getBuffer(), bufferSize);
 	}
 
 	void Vk3dModel::bind(VkCommandBuffer commandBuffer) {

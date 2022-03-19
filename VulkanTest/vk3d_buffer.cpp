@@ -38,20 +38,20 @@ namespace vk3d {
         VkMemoryPropertyFlags memoryPropertyFlags,
         Vk3dAllocator& allocator,
         VkDeviceSize minOffsetAlignment)
-        : lveDevice{ device },
+        : vk3dDevice{ device },
         instanceSize{ instanceSize },
         instanceCount{ instanceCount },
         usageFlags{ usageFlags },
         memoryPropertyFlags{ memoryPropertyFlags },
-        lveAllocator {allocator} {
+        vk3dAllocator {allocator} {
         alignmentSize = getAlignment(instanceSize, minOffsetAlignment);
         bufferSize = alignmentSize * instanceCount;
-        lveAllocator.createBuffer(bufferSize, usageFlags, memoryUsage, memoryPropertyFlags, buffer, memory);
+        vk3dAllocator.createBuffer(bufferSize, usageFlags, memoryUsage, memoryPropertyFlags, buffer, memory);
     }
 
     Vk3dBuffer::~Vk3dBuffer() {
         unmap();
-        lveAllocator.destroyBuffer(buffer, memory);
+        vk3dAllocator.destroyBuffer(buffer, memory);
     }
 
     /**
@@ -65,7 +65,7 @@ namespace vk3d {
      */
     VkResult Vk3dBuffer::map(VkDeviceSize size, VkDeviceSize offset) {
         assert(buffer && memory && "Called map on buffer before create");
-        return vmaMapMemory(lveAllocator.getAllocator(), memory, &mapped);
+        return vmaMapMemory(vk3dAllocator.getAllocator(), memory, &mapped);
     }
 
     /**
@@ -75,7 +75,7 @@ namespace vk3d {
      */
     void Vk3dBuffer::unmap() {
         if (mapped) {
-            vmaUnmapMemory(lveAllocator.getAllocator(), memory);
+            vmaUnmapMemory(vk3dAllocator.getAllocator(), memory);
             mapped = nullptr;
         }
     }
@@ -114,7 +114,7 @@ namespace vk3d {
      * @return VkResult of the flush call
      */
     VkResult Vk3dBuffer::flush(VkDeviceSize size, VkDeviceSize offset) {
-        return vmaFlushAllocation(lveAllocator.getAllocator(), memory, offset, size);
+        return vmaFlushAllocation(vk3dAllocator.getAllocator(), memory, offset, size);
     }
 
     /**
@@ -129,7 +129,7 @@ namespace vk3d {
      * @return VkResult of the invalidate call
      */
     VkResult Vk3dBuffer::invalidate(VkDeviceSize size, VkDeviceSize offset) {
-        return vmaInvalidateAllocation(lveAllocator.getAllocator(), memory, offset, size);
+        return vmaInvalidateAllocation(vk3dAllocator.getAllocator(), memory, offset, size);
     }
 
     /**

@@ -20,13 +20,13 @@ namespace vk3d {
 	};
 
 	//Add here descriptor set
-	ShadowRenderSystem::ShadowRenderSystem(Vk3dDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout shadowSetLayout) : lveDevice{ device } {
+	ShadowRenderSystem::ShadowRenderSystem(Vk3dDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout shadowSetLayout) : vk3dDevice{ device } {
 		createShadowPipelineLayout(shadowSetLayout);
 		createShadowPipeline(renderPass);
 	}
 
 	ShadowRenderSystem::~ShadowRenderSystem() {
-		vkDestroyPipelineLayout(lveDevice.device(), shadowPipelineLayout, nullptr);
+		vkDestroyPipelineLayout(vk3dDevice.device(), shadowPipelineLayout, nullptr);
 	}
 
 	void ShadowRenderSystem::createShadowPipelineLayout(VkDescriptorSetLayout shadowSetLayout) {
@@ -43,7 +43,7 @@ namespace vk3d {
 		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
-		if (vkCreatePipelineLayout(lveDevice.device(), &pipelineLayoutInfo, nullptr, &shadowPipelineLayout) != VK_SUCCESS) {
+		if (vkCreatePipelineLayout(vk3dDevice.device(), &pipelineLayoutInfo, nullptr, &shadowPipelineLayout) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create pipeline layout!");
 		}
 	}
@@ -57,8 +57,8 @@ namespace vk3d {
 		pipelineConfig.renderPass = renderPass;
 		pipelineConfig.subpass = 0;
 		pipelineConfig.pipelineLayout = shadowPipelineLayout;
-		lveShadowPipeline = std::make_unique<Vk3dPipeline>(
-			lveDevice,
+		vk3dShadowPipeline = std::make_unique<Vk3dPipeline>(
+			vk3dDevice,
 			"shaders/shadow_shader.vert.spv",
 			"shaders/shadow_shader.frag.spv",
 			pipelineConfig
@@ -75,7 +75,7 @@ namespace vk3d {
 			0.0f,
 			depthBiasSlope);
 
-		lveShadowPipeline->bind(frameInfo.commandBuffer);
+		vk3dShadowPipeline->bind(frameInfo.commandBuffer);
 
 		vkCmdBindDescriptorSets(
 			frameInfo.commandBuffer,

@@ -29,10 +29,10 @@ namespace vk3d {
 	}
 
 	void Vk3dWindow::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
-		auto lveWindow = reinterpret_cast<Vk3dWindow*>(glfwGetWindowUserPointer(window));
-		lveWindow->framebufferResized = true;
-		lveWindow->width = width;
-		lveWindow->height = height;
+		auto vk3dWindow = reinterpret_cast<Vk3dWindow*>(glfwGetWindowUserPointer(window));
+		vk3dWindow->framebufferResized = true;
+		vk3dWindow->width = width;
+		vk3dWindow->height = height;
 	}
 
 }

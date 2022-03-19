@@ -9,7 +9,7 @@
 
 namespace vk3d {
 
-	Vk3dRenderer::Vk3dRenderer(Vk3dWindow& window, Vk3dDevice& device, Vk3dAllocator& allocator) : lveWindow{ window }, lveDevice{ device }, lveAllocator{allocator} {
+	Vk3dRenderer::Vk3dRenderer(Vk3dWindow& window, Vk3dDevice& device, Vk3dAllocator& allocator) : vk3dWindow{ window }, vk3dDevice{ device }, vk3dAllocator{allocator} {
 		recreateSwapChain();
 		createCommandBuffers();
 	}
@@ -19,20 +19,20 @@ namespace vk3d {
 	}
 
 	void Vk3dRenderer::recreateSwapChain() {
-		auto extent = lveWindow.getExtent();
+		auto extent = vk3dWindow.getExtent();
 		while (extent.width == 0 || extent.height == 0) {
-			extent = lveWindow.getExtent();
+			extent = vk3dWindow.getExtent();
 			glfwWaitEvents();
 		}
-		vkDeviceWaitIdle(lveDevice.device());
-		if (lveSwapChain == nullptr) {
-			lveSwapChain = std::make_unique<Vk3dSwapChain>(lveDevice, lveAllocator, extent);
+		vkDeviceWaitIdle(vk3dDevice.device());
+		if (vk3dSwapChain == nullptr) {
+			vk3dSwapChain = std::make_unique<Vk3dSwapChain>(vk3dDevice, vk3dAllocator, extent);
 		}
 		else {
-			std::shared_ptr<Vk3dSwapChain> oldSwapChain = std::move(lveSwapChain);
-			lveSwapChain = std::make_unique<Vk3dSwapChain>(lveDevice, lveAllocator, extent, oldSwapChain);
+			std::shared_ptr<Vk3dSwapChain> oldSwapChain = std::move(vk3dSwapChain);
+			vk3dSwapChain = std::make_unique<Vk3dSwapChain>(vk3dDevice, vk3dAllocator, extent, oldSwapChain);
 
-			if (!oldSwapChain->compareSwapFormats(*lveSwapChain.get())) {
+			if (!oldSwapChain->compareSwapFormats(*vk3dSwapChain.get())) {
 				throw std::runtime_error("Swap chain image(or depth) format has changed!");
 			}
 		}
@@ -44,23 +44,23 @@ namespace vk3d {
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandPool = lveDevice.getCommandPool();
+		allocInfo.commandPool = vk3dDevice.getCommandPool();
 		allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
 
-		if (vkAllocateCommandBuffers(lveDevice.device(), &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+		if (vkAllocateCommandBuffers(vk3dDevice.device(), &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
 			throw new std::runtime_error("failed to allocate command buffers");
 		}
 	}
 
 	void Vk3dRenderer::freeCommandBuffers() {
-		vkFreeCommandBuffers(lveDevice.device(), lveDevice.getCommandPool(), static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
+		vkFreeCommandBuffers(vk3dDevice.device(), vk3dDevice.getCommandPool(), static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
 		commandBuffers.clear();
 	}
 
 	VkCommandBuffer Vk3dRenderer::beginFrame() {
 		assert(!isFrameStarted && "Can't call beginFrame while already in progress");
 
-		auto result = lveSwapChain->acquireNextImage(&currentImageIndex);
+		auto result = vk3dSwapChain->acquireNextImage(&currentImageIndex);
 
 		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
 			recreateSwapChain();
@@ -91,9 +91,9 @@ namespace vk3d {
 			throw std::runtime_error("failed to record command buffer!");
 		}
 
-		auto result = lveSwapChain->submitCommandBuffers(&commandBuffer, &currentImageIndex);
-		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || lveWindow.wasWindowResized()) {
-			lveWindow.resetWindowResizedFlag();
+		auto result = vk3dSwapChain->submitCommandBuffers(&commandBuffer, &currentImageIndex);
+		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || vk3dWindow.wasWindowResized()) {
+			vk3dWindow.resetWindowResizedFlag();
 			recreateSwapChain();
 		}
 		else if (result != VK_SUCCESS) {
@@ -110,11 +110,11 @@ namespace vk3d {
 
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = lveSwapChain->getRenderPass();
-		renderPassInfo.framebuffer = lveSwapChain->getFrameBuffer(currentImageIndex);
+		renderPassInfo.renderPass = vk3dSwapChain->getRenderPass();
+		renderPassInfo.framebuffer = vk3dSwapChain->getFrameBuffer(currentImageIndex);
 
 		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.renderArea.extent = lveSwapChain->getSwapChainExtent();
+		renderPassInfo.renderArea.extent = vk3dSwapChain->getSwapChainExtent();
 
 		std::array<VkClearValue, 4> clearValues{};
 		clearValues[0].color = { 0.02f, 0.01f, 0.01f, 1.0f };
@@ -129,11 +129,11 @@ namespace vk3d {
 		VkViewport viewport{};
 		viewport.x = 0.0f;
 		viewport.y = 0.0f;
-		viewport.width = static_cast<float>(lveSwapChain->getSwapChainExtent().width);
-		viewport.height = static_cast<float>(lveSwapChain->getSwapChainExtent().height);
+		viewport.width = static_cast<float>(vk3dSwapChain->getSwapChainExtent().width);
+		viewport.height = static_cast<float>(vk3dSwapChain->getSwapChainExtent().height);
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
-		VkRect2D scissor{ {0, 0}, lveSwapChain->getSwapChainExtent() };
+		VkRect2D scissor{ {0, 0}, vk3dSwapChain->getSwapChainExtent() };
 		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 	}
@@ -149,11 +149,11 @@ namespace vk3d {
 
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = lveSwapChain->getShadowRenderPass();
-		renderPassInfo.framebuffer = lveSwapChain->getShadowFrameBuffer(currentImageIndex);
+		renderPassInfo.renderPass = vk3dSwapChain->getShadowRenderPass();
+		renderPassInfo.framebuffer = vk3dSwapChain->getShadowFrameBuffer(currentImageIndex);
 
 		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.renderArea.extent = lveSwapChain->getShadowMapExtent();
+		renderPassInfo.renderArea.extent = vk3dSwapChain->getShadowMapExtent();
 
 		std::array<VkClearValue, 2> clearValues{};
 		clearValues[0].color = { 0.01f };
@@ -166,16 +166,54 @@ namespace vk3d {
 		VkViewport viewport{};
 		viewport.x = 0.0f;
 		viewport.y = 0.0f;
-		viewport.width = static_cast<float>(lveSwapChain->getShadowMapExtent().width);
-		viewport.height = static_cast<float>(lveSwapChain->getShadowMapExtent().height);
+		viewport.width = static_cast<float>(vk3dSwapChain->getShadowMapExtent().width);
+		viewport.height = static_cast<float>(vk3dSwapChain->getShadowMapExtent().height);
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
-		VkRect2D scissor{ {0, 0}, lveSwapChain->getShadowMapExtent() };
+		VkRect2D scissor{ {0, 0}, vk3dSwapChain->getShadowMapExtent() };
 		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 	}
 
 	void Vk3dRenderer::endShadowRenderPass(VkCommandBuffer commandBuffer) {
+		assert(isFrameStarted && "Can't call endSwapChainRenderPass if frame is not in progress");
+		assert(commandBuffer == getCurrentCommandBuffer() && "Can't end render pass on command buffer from a different frame");
+		vkCmdEndRenderPass(commandBuffer);
+	}
+
+	void Vk3dRenderer::beginReflectionsRenderPass(VkCommandBuffer commandBuffer) {
+		assert(isFrameStarted && "Can't call beginSwapChainRenderPass if frame is not in progress");
+		assert(commandBuffer == getCurrentCommandBuffer() && "Can't begin render pass on command buffer from a different frame");
+
+		VkRenderPassBeginInfo renderPassInfo{};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = vk3dSwapChain->getReflectionsRenderPass();
+		renderPassInfo.framebuffer = vk3dSwapChain->getReflectionsFrameBuffer(currentImageIndex);
+
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent = vk3dSwapChain->getSwapChainExtent();
+
+		std::array<VkClearValue, 2> clearValues{};
+		clearValues[0].color = { 0.03f, 0.03f, 0.03f, 0.03f };
+		clearValues[1].depthStencil = { 1.0f, 0 };
+		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+		renderPassInfo.pClearValues = clearValues.data();
+
+		vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+		VkViewport viewport{};
+		viewport.x = 0.0f;
+		viewport.y = 0.0f;
+		viewport.width = static_cast<float>(vk3dSwapChain->getSwapChainExtent().width);
+		viewport.height = static_cast<float>(vk3dSwapChain->getSwapChainExtent().height);
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+		VkRect2D scissor{ {0, 0}, vk3dSwapChain->getSwapChainExtent() };
+		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+	}
+
+	void Vk3dRenderer::endReflectionsRenderPass(VkCommandBuffer commandBuffer) {
 		assert(isFrameStarted && "Can't call endSwapChainRenderPass if frame is not in progress");
 		assert(commandBuffer == getCurrentCommandBuffer() && "Can't end render pass on command buffer from a different frame");
 		vkCmdEndRenderPass(commandBuffer);

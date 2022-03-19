@@ -13,7 +13,7 @@ namespace vk3d {
     public:
         class Builder {
         public:
-            Builder(Vk3dDevice& lveDevice) : lveDevice{ lveDevice } {}
+            Builder(Vk3dDevice& vk3dDevice) : vk3dDevice{ vk3dDevice } {}
 
             Builder& addBinding(
                 uint32_t binding,
@@ -23,12 +23,12 @@ namespace vk3d {
             std::unique_ptr<Vk3dDescriptorSetLayout> build() const;
 
         private:
-            Vk3dDevice& lveDevice;
+            Vk3dDevice& vk3dDevice;
             std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> bindings{};
         };
 
         Vk3dDescriptorSetLayout(
-            Vk3dDevice& lveDevice, std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> bindings);
+            Vk3dDevice& vk3dDevice, std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> bindings);
         ~Vk3dDescriptorSetLayout();
         Vk3dDescriptorSetLayout(const Vk3dDescriptorSetLayout&) = delete;
         Vk3dDescriptorSetLayout& operator=(const Vk3dDescriptorSetLayout&) = delete;
@@ -36,7 +36,7 @@ namespace vk3d {
         VkDescriptorSetLayout getDescriptorSetLayout() const { return descriptorSetLayout; }
 
     private:
-        Vk3dDevice& lveDevice;
+        Vk3dDevice& vk3dDevice;
         VkDescriptorSetLayout descriptorSetLayout;
         std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> bindings;
 
@@ -47,7 +47,7 @@ namespace vk3d {
     public:
         class Builder {
         public:
-            Builder(Vk3dDevice& lveDevice) : lveDevice{ lveDevice } {}
+            Builder(Vk3dDevice& vk3dDevice) : vk3dDevice{ vk3dDevice } {}
 
             Builder& addPoolSize(VkDescriptorType descriptorType, uint32_t count);
             Builder& setPoolFlags(VkDescriptorPoolCreateFlags flags);
@@ -55,14 +55,14 @@ namespace vk3d {
             std::unique_ptr<Vk3dDescriptorPool> build() const;
 
         private:
-            Vk3dDevice& lveDevice;
+            Vk3dDevice& vk3dDevice;
             std::vector<VkDescriptorPoolSize> poolSizes{};
             uint32_t maxSets = 1000;
             VkDescriptorPoolCreateFlags poolFlags = 0;
         };
 
         Vk3dDescriptorPool(
-            Vk3dDevice& lveDevice,
+            Vk3dDevice& vk3dDevice,
             uint32_t maxSets,
             VkDescriptorPoolCreateFlags poolFlags,
             const std::vector<VkDescriptorPoolSize>& poolSizes);
@@ -78,7 +78,7 @@ namespace vk3d {
         void resetPool();
 
     private:
-        Vk3dDevice& lveDevice;
+        Vk3dDevice& vk3dDevice;
         VkDescriptorPool descriptorPool;
 
         friend class Vk3dDescriptorWriter;

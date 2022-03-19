@@ -31,12 +31,12 @@ namespace vk3d {
 		void createCompositionPipelineLayout(VkDescriptorSetLayout globalSetLayout);
 		void createCompositionPipeline(VkRenderPass renderPass);
 
-		Vk3dDevice &lveDevice;
+		Vk3dDevice &vk3dDevice;
 
-		Vk3dAllocator lveAllocator{ lveDevice };
-		std::unique_ptr<Vk3dPipeline> lveGBufferPipeline;
+		Vk3dAllocator vk3dAllocator{ vk3dDevice };
+		std::unique_ptr<Vk3dPipeline> vk3dGBufferPipeline;
 		VkPipelineLayout gBufferPipelineLayout;
-		std::unique_ptr<Vk3dPipeline> lveCompositionPipeline;
+		std::unique_ptr<Vk3dPipeline> vk3dCompositionPipeline;
 		VkPipelineLayout compositionPipelineLayout;
 	};
 }

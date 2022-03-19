@@ -47,7 +47,7 @@ namespace vk3d {
 
 		void createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule);
 
-		Vk3dDevice& lveDevice;
+		Vk3dDevice& vk3dDevice;
 		VkPipeline graphicsPipeline;
 		VkShaderModule vertShaderModule;
 		VkShaderModule fragShaderModule;

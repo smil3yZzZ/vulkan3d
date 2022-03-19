@@ -15,13 +15,13 @@
 
 namespace vk3d {
 
-	PointLightSystem::PointLightSystem(Vk3dDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout gBufferSetLayout, VkDescriptorSetLayout compositionSetLayout) : lveDevice{ device } {
+	PointLightSystem::PointLightSystem(Vk3dDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout gBufferSetLayout, VkDescriptorSetLayout compositionSetLayout) : vk3dDevice{ device } {
 		createPipelineLayout(gBufferSetLayout, compositionSetLayout);
 		createPipeline(renderPass);
 	}
 
 	PointLightSystem::~PointLightSystem() {
-		vkDestroyPipelineLayout(lveDevice.device(), pipelineLayout, nullptr);
+		vkDestroyPipelineLayout(vk3dDevice.device(), pipelineLayout, nullptr);
 	}
 
 	void PointLightSystem::createPipelineLayout(VkDescriptorSetLayout gBufferSetLayout, VkDescriptorSetLayout compositionSetLayout) {
@@ -33,7 +33,7 @@ namespace vk3d {
 		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
 		pipelineLayoutInfo.pushConstantRangeCount = 0;
 		pipelineLayoutInfo.pPushConstantRanges = nullptr;
-		if (vkCreatePipelineLayout(lveDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+		if (vkCreatePipelineLayout(vk3dDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create pipeline layout!");
 		}
 	}
@@ -47,8 +47,8 @@ namespace vk3d {
 		pipelineConfig.renderPass = renderPass;
 		pipelineConfig.subpass = 1;
 		pipelineConfig.pipelineLayout = pipelineLayout;
-		lvePipeline = std::make_unique<Vk3dPipeline>(
-			lveDevice,
+		vk3dPipeline = std::make_unique<Vk3dPipeline>(
+			vk3dDevice,
 			"shaders/point_light.vert.spv",
 			"shaders/point_light.frag.spv",
 			pipelineConfig
@@ -56,7 +56,7 @@ namespace vk3d {
 	}
 
 	void PointLightSystem::render(FrameInfo& frameInfo) {
-		lvePipeline->bind(frameInfo.commandBuffer);
+		vk3dPipeline->bind(frameInfo.commandBuffer);
 
 		vkCmdBindDescriptorSets(
 			frameInfo.commandBuffer,

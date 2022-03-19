@@ -25,7 +25,7 @@ namespace vk3d {
 		glm::vec2 invResolution{ 1.f };
 	};
 
-	SimpleRenderSystem::SimpleRenderSystem(Vk3dDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout gBufferSetLayout, VkDescriptorSetLayout compositionSetLayout) : lveDevice{device} {
+	SimpleRenderSystem::SimpleRenderSystem(Vk3dDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout gBufferSetLayout, VkDescriptorSetLayout compositionSetLayout) : vk3dDevice{device} {
 		createGBufferPipelineLayout(gBufferSetLayout);
 		createGBufferPipeline(renderPass);
 		createCompositionPipelineLayout(compositionSetLayout);
@@ -33,8 +33,8 @@ namespace vk3d {
 	}
 
 	SimpleRenderSystem::~SimpleRenderSystem() {
-		vkDestroyPipelineLayout(lveDevice.device(), compositionPipelineLayout, nullptr);
-		vkDestroyPipelineLayout(lveDevice.device(), gBufferPipelineLayout, nullptr);
+		vkDestroyPipelineLayout(vk3dDevice.device(), compositionPipelineLayout, nullptr);
+		vkDestroyPipelineLayout(vk3dDevice.device(), gBufferPipelineLayout, nullptr);
 	}
 
 	void SimpleRenderSystem::createGBufferPipelineLayout(VkDescriptorSetLayout gBufferSetLayout) {
@@ -52,7 +52,7 @@ namespace vk3d {
 		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
-		if (vkCreatePipelineLayout(lveDevice.device(), &pipelineLayoutInfo, nullptr, &gBufferPipelineLayout) != VK_SUCCESS) {
+		if (vkCreatePipelineLayout(vk3dDevice.device(), &pipelineLayoutInfo, nullptr, &gBufferPipelineLayout) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create pipeline layout!");
 		}
 	}
@@ -66,8 +66,8 @@ namespace vk3d {
 		pipelineConfig.renderPass = renderPass;
 		pipelineConfig.subpass = 0;
 		pipelineConfig.pipelineLayout = gBufferPipelineLayout;
-		lveGBufferPipeline = std::make_unique<Vk3dPipeline>(
-			lveDevice,
+		vk3dGBufferPipeline = std::make_unique<Vk3dPipeline>(
+			vk3dDevice,
 			"shaders/gbuffer_shader.vert.spv",
 			"shaders/gbuffer_shader.frag.spv",
 			pipelineConfig
@@ -88,7 +88,7 @@ namespace vk3d {
 		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
-		if (vkCreatePipelineLayout(lveDevice.device(), &pipelineLayoutInfo, nullptr, &compositionPipelineLayout) != VK_SUCCESS) {
+		if (vkCreatePipelineLayout(vk3dDevice.device(), &pipelineLayoutInfo, nullptr, &compositionPipelineLayout) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create pipeline layout!");
 		}
 	}
@@ -102,8 +102,8 @@ namespace vk3d {
 		pipelineConfig.renderPass = renderPass;
 		pipelineConfig.subpass = 1;
 		pipelineConfig.pipelineLayout = compositionPipelineLayout;
-		lveCompositionPipeline = std::make_unique<Vk3dPipeline>(
-			lveDevice,
+		vk3dCompositionPipeline = std::make_unique<Vk3dPipeline>(
+			vk3dDevice,
 			"shaders/composition_shader.vert.spv",
 			"shaders/composition_shader.frag.spv",
 			pipelineConfig
@@ -112,7 +112,7 @@ namespace vk3d {
 
 	void SimpleRenderSystem::renderGameObjects(FrameInfo& frameInfo, glm::mat4 invViewProj, glm::vec2 invResolution) {
 		// First subpass
-		lveGBufferPipeline->bind(frameInfo.commandBuffer);
+		vk3dGBufferPipeline->bind(frameInfo.commandBuffer);
 
 		vkCmdBindDescriptorSets(
 			frameInfo.commandBuffer,
@@ -149,7 +149,7 @@ namespace vk3d {
 		vkCmdNextSubpass(frameInfo.commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 
 		//Second subpass		
-		lveCompositionPipeline->bind(frameInfo.commandBuffer);
+		vk3dCompositionPipeline->bind(frameInfo.commandBuffer);
 
 		vkCmdBindDescriptorSets(
 			frameInfo.commandBuffer,

@@ -55,8 +55,8 @@ namespace vk3d {
 			void createIndexBuffers(const std::vector<uint32_t>& indices);
 			void destroyVertexBuffers();
 
-			Vk3dDevice& lveDevice;
-			Vk3dAllocator& lveAllocator;
+			Vk3dDevice& vk3dDevice;
+			Vk3dAllocator& vk3dAllocator;
 			std::unique_ptr<Vk3dBuffer> vertexBuffer;
 			uint32_t vertexCount;
 

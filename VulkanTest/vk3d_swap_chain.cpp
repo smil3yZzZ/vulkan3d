@@ -27,10 +27,13 @@ void Vk3dSwapChain::init() {
     createSwapChain();
     createSwapChainImageViews();
     createShadowSampler();
+    createReflectionsSampler();
     createDeferredResources();
     createShadowRenderPass();
+    createReflectionsRenderPass();
     createCompositionRenderPass();
     createShadowFramebuffers();
+    createReflectionsFramebuffers();
     createCompositionFramebuffers();
     createSyncObjects();
     createDescriptorPool();
@@ -52,11 +55,13 @@ Vk3dSwapChain::~Vk3dSwapChain() {
       destroyAttachment(&attachments.normal);
       destroyAttachment(&attachments.albedo);
       destroyAttachment(&attachments.depth);
+      destroyAttachment(&attachments.reflectionsMapDepth);
       destroyAttachment(&attachments.shadowDepth);
   }
   attachmentsVector.clear();
 
   for (auto& samplers : samplersVector) {
+      destroySampler(&samplers.reflectionsMap);
       destroySampler(&samplers.shadowOmni);
   }
   samplersVector.clear();
@@ -376,25 +381,24 @@ void Vk3dSwapChain::createCompositionFramebuffers() {
 
 void Vk3dSwapChain::createDeferredResources() {
     VkExtent2D swapChainExtent = getSwapChainExtent();
-    deferredResourcesFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
 
     attachmentsVector.resize(imageCount());
 
     for (auto& attachments : attachmentsVector) {
-        createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.normal, swapChainExtent, false);
-        createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.albedo, swapChainExtent, false);
-        createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.depth, swapChainExtent, false);
+        createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.normal, swapChainExtent);
+        createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.albedo, swapChainExtent);
+        createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.depth, swapChainExtent);
     }   
 }
 
-void Vk3dSwapChain::createSampler(VkFormat format, VkImageUsageFlags usage, Sampler* sampler, VkExtent2D extent, bool isCubeMap) {
+void Vk3dSwapChain::createSampler(VkFormat format, VkImageUsageFlags usage, Sampler* sampler, VkExtent2D extent, VkImageViewType imageViewType, uint32_t arrayLayers) {
     VkFilter shadowMapFilter = formatIsFilterable(device.getPhysicalDevice(), format, VK_IMAGE_TILING_OPTIMAL) ?
         DEFAULT_SHADOWMAP_FILTER :
         VK_FILTER_NEAREST;
     VkSamplerCreateInfo samplerCreateInfo{};
     samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerCreateInfo.magFilter = isCubeMap ? VK_FILTER_LINEAR : shadowMapFilter;
-    samplerCreateInfo.minFilter = isCubeMap ? VK_FILTER_LINEAR : shadowMapFilter;
+    samplerCreateInfo.magFilter = !(imageViewType & VK_IMAGE_VIEW_TYPE_2D) ? VK_FILTER_LINEAR : shadowMapFilter;
+    samplerCreateInfo.minFilter = !(imageViewType & VK_IMAGE_VIEW_TYPE_2D) ? VK_FILTER_LINEAR : shadowMapFilter;
     samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
     samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerCreateInfo.addressModeV = samplerCreateInfo.addressModeU;
@@ -409,11 +413,22 @@ void Vk3dSwapChain::createSampler(VkFormat format, VkImageUsageFlags usage, Samp
     if (vkCreateSampler(device.device(), &samplerCreateInfo, nullptr, &sampler->sampler) != VK_SUCCESS) {
         throw std::runtime_error("failed to create shadow depth sampler!");
     }
-    createAttachment(format, usage, &sampler->attachment, extent, isCubeMap);
+    createAttachment(format, usage, &sampler->attachment, extent, imageViewType, arrayLayers);
 }
 
-void Vk3dSwapChain::createAttachment(VkFormat format, VkImageUsageFlags usage, FrameBufferAttachment* attachment, VkExtent2D extent, bool isCubeMap) {
+void Vk3dSwapChain::createAttachment(VkFormat format, VkImageUsageFlags usage, FrameBufferAttachment* attachment, VkExtent2D extent, VkImageViewType imageViewType, uint32_t arrayLayers) {
     attachment->format = format;
+
+    VkImageCreateFlags imageCreateFlags;
+    VkComponentMapping componentMapping{};
+
+    if (imageViewType == VK_IMAGE_VIEW_TYPE_CUBE) {
+        imageCreateFlags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+        componentMapping = { VK_COMPONENT_SWIZZLE_R };
+    }
+    else {
+        imageCreateFlags = 0;
+    }
 
     VkImageAspectFlags imageAspectFlags;
 
@@ -431,34 +446,28 @@ void Vk3dSwapChain::createAttachment(VkFormat format, VkImageUsageFlags usage, F
     imageInfo.extent.height = extent.height;
     imageInfo.extent.depth = 1;
     imageInfo.mipLevels = 1;
-    imageInfo.arrayLayers = isCubeMap ? 6 : 1;
+    imageInfo.arrayLayers = arrayLayers;
     imageInfo.format = attachment->format;
     imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imageInfo.usage = usage;
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    imageInfo.flags = isCubeMap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
+    imageInfo.flags = imageCreateFlags;
 
     allocator.createImage(&imageInfo, VMA_MEMORY_USAGE_GPU_ONLY, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, attachment->image, attachment->memory);
-
-    VkComponentMapping componentMapping{};
-
-    if (isCubeMap) {
-        componentMapping = { VK_COMPONENT_SWIZZLE_R };
-    }
 
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = attachment->image;
-    viewInfo.viewType = isCubeMap ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.viewType = imageViewType;
     viewInfo.format = attachment->format;
     viewInfo.components = componentMapping;
     viewInfo.subresourceRange.aspectMask = imageAspectFlags;
     viewInfo.subresourceRange.baseMipLevel = 0;
     viewInfo.subresourceRange.levelCount = 1;
     viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = isCubeMap ? NUM_CUBE_FACES : 1;
+    viewInfo.subresourceRange.layerCount = arrayLayers;
 
     if (vkCreateImageView(device.device(), &viewInfo, nullptr, &attachment->view) != VK_SUCCESS) {
         throw std::runtime_error("failed to create position image view!");
@@ -561,11 +570,11 @@ void Vk3dSwapChain::createShadowSampler() {
     VkExtent2D shadowMapExtent = getShadowMapExtent();
 
     for (auto& samplers : samplersVector) {
-        createSampler(SHADOW_FB_COLOR_FORMAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &samplers.shadowOmni, shadowMapExtent, true);
+        createSampler(SHADOW_FB_COLOR_FORMAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &samplers.shadowOmni, shadowMapExtent, VK_IMAGE_VIEW_TYPE_CUBE, NUM_CUBE_FACES);
     }
 
     for (auto& attachments: attachmentsVector) {
-        createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &attachments.shadowDepth, shadowMapExtent, true);
+        createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &attachments.shadowDepth, shadowMapExtent, VK_IMAGE_VIEW_TYPE_CUBE, NUM_CUBE_FACES);
     }
 }
 
@@ -675,6 +684,127 @@ void Vk3dSwapChain::createShadowFramebuffers() {
     }
 }
 
+
+void Vk3dSwapChain::createReflectionsSampler() {
+    deferredResourcesFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
+
+    for (auto& samplers : samplersVector) {
+        createSampler(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &samplers.reflectionsMap, swapChainExtent);
+    }
+
+    for (auto& attachments : attachmentsVector) {
+        createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &attachments.reflectionsMapDepth, swapChainExtent);
+    }
+}
+
+void Vk3dSwapChain::createReflectionsRenderPass() {
+    std::array<VkAttachmentDescription, 2> attachments{};
+
+    // View space position % normals attachment
+    attachments[0].format = deferredResourcesFormat;
+    attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[0].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    attachments[0].flags = 0;
+
+    // Depth attachment (shadow)
+    attachments[1].format = findDepthFormat();
+    attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    attachments[1].flags = 0;
+
+    // One subpass
+    std::array<VkSubpassDescription, 1> subpassDescriptions{};
+
+    VkAttachmentReference colorReferences[1];
+    colorReferences[0] = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+    VkAttachmentReference depthReference = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+
+    subpassDescriptions[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpassDescriptions[0].colorAttachmentCount = 1;
+    subpassDescriptions[0].pColorAttachments = colorReferences;
+    subpassDescriptions[0].pDepthStencilAttachment = &depthReference;
+
+    // Subpass dependencies for layout transitions
+    std::array<VkSubpassDependency, 2> dependencies;
+
+    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass = 0;
+    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependencies[0].srcAccessMask = 0;
+    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    dependencies[1].srcSubpass = 0;
+    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    VkRenderPassCreateInfo renderPassInfo = {};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    renderPassInfo.pAttachments = attachments.data();
+    renderPassInfo.subpassCount = subpassDescriptions.size();
+    renderPassInfo.pSubpasses = subpassDescriptions.data();
+    renderPassInfo.dependencyCount = dependencies.size();
+    renderPassInfo.pDependencies = dependencies.data();
+
+    /*
+    uint32_t viewAndCorrelationMask = 0b00000011; //2 faces
+
+    VkRenderPassMultiviewCreateInfo renderPassMultiviewInfo{};
+    renderPassMultiviewInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO;
+    renderPassMultiviewInfo.subpassCount = 1;
+    renderPassMultiviewInfo.pViewMasks = &viewAndCorrelationMask;
+    renderPassMultiviewInfo.correlationMaskCount = 1;
+    renderPassMultiviewInfo.pCorrelationMasks = &viewAndCorrelationMask;
+
+    renderPassInfo.pNext = &renderPassMultiviewInfo;
+    */
+
+    if (vkCreateRenderPass(device.device(), &renderPassInfo, nullptr, &reflectionsRenderPass) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create render pass!");
+    }
+}
+
+void Vk3dSwapChain::createReflectionsFramebuffers() {
+    reflectionsFramebuffers.resize(imageCount());
+    VkExtent2D swapChainExtent = getSwapChainExtent();
+    for (size_t i = 0; i < imageCount(); i++) {
+        std::array<VkImageView, 2> attachments = { samplersVector[i].reflectionsMap.attachment.view, attachmentsVector[i].reflectionsMapDepth.view };
+
+        VkFramebufferCreateInfo framebufferInfo = {};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = reflectionsRenderPass;
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebufferInfo.pAttachments = attachments.data();
+        framebufferInfo.width = swapChainExtent.width;
+        framebufferInfo.height = swapChainExtent.height;
+        framebufferInfo.layers = 1;
+
+        if (vkCreateFramebuffer(
+            device.device(),
+            &framebufferInfo,
+            nullptr,
+            &reflectionsFramebuffers[i]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create framebuffer!");
+        }
+    }
+}
+
 void Vk3dSwapChain::destroySampler(Sampler* sampler) {
     destroyAttachment(&sampler->attachment);
     vkDestroySampler(device.device(), sampler->sampler, nullptr);
@@ -682,18 +812,20 @@ void Vk3dSwapChain::destroySampler(Sampler* sampler) {
 
 void Vk3dSwapChain::createDescriptorPool() {
     globalPool = Vk3dDescriptorPool::Builder(device)
-        .setMaxSets(3 * imageCount())
-        .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 * imageCount())
+        .setMaxSets(4 * imageCount())
+        .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4 * imageCount())
         .addPoolSize(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 3 * imageCount())
-        .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, imageCount())
+        .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 * imageCount())
         .build();
 }
 
 void Vk3dSwapChain::createUniformBuffers() {
     shadowUboBuffers.clear();
+    reflectionsUboBuffers.clear();
     gBufferUboBuffers.clear();
     compositionUboBuffers.clear();
     shadowUboBuffers.resize(imageCount());
+    reflectionsUboBuffers.resize(imageCount());
     gBufferUboBuffers.resize(imageCount());
     compositionUboBuffers.resize(imageCount());
 
@@ -708,6 +840,16 @@ void Vk3dSwapChain::createUniformBuffers() {
             allocator
             );
         shadowUboBuffers[i]->map();
+        reflectionsUboBuffers[i] = std::make_unique<Vk3dBuffer>(
+            device,
+            sizeof(ReflectionsUbo),
+            1,
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VMA_MEMORY_USAGE_CPU_TO_GPU,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+            allocator
+            );
+        reflectionsUboBuffers[i]->map();
         gBufferUboBuffers[i] = std::make_unique<Vk3dBuffer>(
             device,
             sizeof(GBufferUbo),
@@ -728,6 +870,19 @@ void Vk3dSwapChain::createUniformBuffers() {
             allocator
             );
         compositionUboBuffers[i]->map();
+    }
+
+    reflectionsSetLayout = Vk3dDescriptorSetLayout::Builder(device)
+        .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+        .build();
+
+    reflectionsDescriptorSets.clear();
+    reflectionsDescriptorSets.resize(imageCount());
+    for (int i = 0; i < reflectionsDescriptorSets.size(); i++) {
+        auto bufferInfo = reflectionsUboBuffers[i]->descriptorInfo();
+        Vk3dDescriptorWriter(*reflectionsSetLayout, *globalPool)
+            .writeBuffer(0, &bufferInfo)
+            .build(reflectionsDescriptorSets[i]);
     }
 
     shadowSetLayout = Vk3dDescriptorSetLayout::Builder(device)
@@ -762,6 +917,7 @@ void Vk3dSwapChain::createUniformBuffers() {
         .addBinding(2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
         .addBinding(3, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
         .addBinding(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+        .addBinding(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
         .build();
 
     compositionDescriptorSets.clear();
@@ -773,6 +929,7 @@ void Vk3dSwapChain::createUniformBuffers() {
         auto depthInfo = attachmentsVector[i].depth.descriptorInfo();
         auto bufferInfo = compositionUboBuffers[i]->descriptorInfo();
         auto shadowOmni = samplersVector[i].shadowOmni.attachment.descriptorInfo(samplersVector[i].shadowOmni.sampler);
+        auto reflectionsMap = samplersVector[i].reflectionsMap.attachment.descriptorInfo(samplersVector[i].reflectionsMap.sampler);
         Vk3dDescriptorWriter(*compositionSetLayout, *globalPool)
             .writeImage(0, &normalInfo)
             .writeImage(1, &albedoInfo)
@@ -785,6 +942,10 @@ void Vk3dSwapChain::createUniformBuffers() {
 void Vk3dSwapChain::updateCurrentShadowUbo(void* data, int currentImageIndex) {
     shadowUboBuffers[currentImageIndex]->writeToBuffer(data);
     shadowUboBuffers[currentImageIndex]->flush();
+}
+void Vk3dSwapChain::updateCurrentReflectionsUbo(void* data, int currentImageIndex) {
+    reflectionsUboBuffers[currentImageIndex]->writeToBuffer(data);
+    reflectionsUboBuffers[currentImageIndex]->flush();
 }
 void Vk3dSwapChain::updateCurrentGBufferUbo(void* data, int currentImageIndex) {
     gBufferUboBuffers[currentImageIndex]->writeToBuffer(data);

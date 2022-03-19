@@ -46,7 +46,7 @@ namespace vk3d {
     private:
         static VkDeviceSize getAlignment(VkDeviceSize instanceSize, VkDeviceSize minOffsetAlignment);
 
-        Vk3dDevice& lveDevice;
+        Vk3dDevice& vk3dDevice;
         void* mapped = nullptr;
         VkBuffer buffer = VK_NULL_HANDLE;
         VmaAllocation memory = VK_NULL_HANDLE;
@@ -56,7 +56,7 @@ namespace vk3d {
         VkDeviceSize instanceSize;
         VkDeviceSize alignmentSize;
         VkBufferUsageFlags usageFlags;
-        Vk3dAllocator& lveAllocator;
+        Vk3dAllocator& vk3dAllocator;
         VkMemoryPropertyFlags memoryPropertyFlags;
     };
 

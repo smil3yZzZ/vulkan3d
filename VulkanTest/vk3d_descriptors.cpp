@@ -26,14 +26,14 @@ namespace vk3d {
     }
 
     std::unique_ptr<Vk3dDescriptorSetLayout> Vk3dDescriptorSetLayout::Builder::build() const {
-        return std::make_unique<Vk3dDescriptorSetLayout>(lveDevice, bindings);
+        return std::make_unique<Vk3dDescriptorSetLayout>(vk3dDevice, bindings);
     }
 
     // *************** Descriptor Set Layout *********************
 
     Vk3dDescriptorSetLayout::Vk3dDescriptorSetLayout(
-        Vk3dDevice& lveDevice, std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> bindings)
-        : lveDevice{ lveDevice }, bindings{ bindings } {
+        Vk3dDevice& vk3dDevice, std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> bindings)
+        : vk3dDevice{ vk3dDevice }, bindings{ bindings } {
         std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings{};
         for (auto kv : bindings) {
             setLayoutBindings.push_back(kv.second);
@@ -45,7 +45,7 @@ namespace vk3d {
         descriptorSetLayoutInfo.pBindings = setLayoutBindings.data();
 
         if (vkCreateDescriptorSetLayout(
-            lveDevice.device(),
+            vk3dDevice.device(),
             &descriptorSetLayoutInfo,
             nullptr,
             &descriptorSetLayout) != VK_SUCCESS) {
@@ -54,7 +54,7 @@ namespace vk3d {
     }
 
     Vk3dDescriptorSetLayout::~Vk3dDescriptorSetLayout() {
-        vkDestroyDescriptorSetLayout(lveDevice.device(), descriptorSetLayout, nullptr);
+        vkDestroyDescriptorSetLayout(vk3dDevice.device(), descriptorSetLayout, nullptr);
     }
 
     // *************** Descriptor Pool Builder *********************
@@ -76,17 +76,17 @@ namespace vk3d {
     }
 
     std::unique_ptr<Vk3dDescriptorPool> Vk3dDescriptorPool::Builder::build() const {
-        return std::make_unique<Vk3dDescriptorPool>(lveDevice, maxSets, poolFlags, poolSizes);
+        return std::make_unique<Vk3dDescriptorPool>(vk3dDevice, maxSets, poolFlags, poolSizes);
     }
 
     // *************** Descriptor Pool *********************
 
     Vk3dDescriptorPool::Vk3dDescriptorPool(
-        Vk3dDevice& lveDevice,
+        Vk3dDevice& vk3dDevice,
         uint32_t maxSets,
         VkDescriptorPoolCreateFlags poolFlags,
         const std::vector<VkDescriptorPoolSize>& poolSizes)
-        : lveDevice{ lveDevice } {
+        : vk3dDevice{ vk3dDevice } {
         VkDescriptorPoolCreateInfo descriptorPoolInfo{};
         descriptorPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         descriptorPoolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
@@ -94,14 +94,14 @@ namespace vk3d {
         descriptorPoolInfo.maxSets = maxSets;
         descriptorPoolInfo.flags = poolFlags;
 
-        if (vkCreateDescriptorPool(lveDevice.device(), &descriptorPoolInfo, nullptr, &descriptorPool) !=
+        if (vkCreateDescriptorPool(vk3dDevice.device(), &descriptorPoolInfo, nullptr, &descriptorPool) !=
             VK_SUCCESS) {
             throw std::runtime_error("failed to create descriptor pool!");
         }
     }
 
     Vk3dDescriptorPool::~Vk3dDescriptorPool() {
-        vkDestroyDescriptorPool(lveDevice.device(), descriptorPool, nullptr);
+        vkDestroyDescriptorPool(vk3dDevice.device(), descriptorPool, nullptr);
     }
 
     bool Vk3dDescriptorPool::allocateDescriptor(
@@ -114,7 +114,7 @@ namespace vk3d {
 
         // Might want to create a "DescriptorPoolManager" class that handles this case, and builds
         // a new pool whenever an old pool fills up. But this is beyond our current scope
-        if (vkAllocateDescriptorSets(lveDevice.device(), &allocInfo, &descriptor) != VK_SUCCESS) {
+        if (vkAllocateDescriptorSets(vk3dDevice.device(), &allocInfo, &descriptor) != VK_SUCCESS) {
             std::cout << "Couldn't allocate descriptor sets!" << std::endl;
             return false;
         }
@@ -123,14 +123,14 @@ namespace vk3d {
 
     void Vk3dDescriptorPool::freeDescriptors(std::vector<VkDescriptorSet>& descriptors) const {
         vkFreeDescriptorSets(
-            lveDevice.device(),
+            vk3dDevice.device(),
             descriptorPool,
             static_cast<uint32_t>(descriptors.size()),
             descriptors.data());
     }
 
     void Vk3dDescriptorPool::resetPool() {
-        vkResetDescriptorPool(lveDevice.device(), descriptorPool, 0);
+        vkResetDescriptorPool(vk3dDevice.device(), descriptorPool, 0);
     }
 
     // *************** Descriptor Writer *********************
@@ -193,7 +193,7 @@ namespace vk3d {
         for (auto& write : writes) {
             write.dstSet = set;
         }
-        vkUpdateDescriptorSets(pool.lveDevice.device(), writes.size(), writes.data(), 0, nullptr);
+        vkUpdateDescriptorSets(pool.vk3dDevice.device(), writes.size(), writes.data(), 0, nullptr);
     }
 
 }  // namespace vk3d

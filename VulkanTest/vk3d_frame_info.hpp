@@ -13,6 +13,7 @@ namespace vk3d {
 		VkCommandBuffer commandBuffer;
 		Vk3dCamera& camera;
 		VkDescriptorSet shadowDescriptorSet;
+		VkDescriptorSet reflectionsDescriptorSet;
 		VkDescriptorSet gBufferDescriptorSet;
 		VkDescriptorSet compositionDescriptorSet;
 		Vk3dGameObject::Map& gameObjects;

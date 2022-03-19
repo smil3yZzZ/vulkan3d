@@ -4,6 +4,7 @@ layout (input_attachment_index = 0, binding = 0) uniform subpassInput samplerNor
 layout (input_attachment_index = 1, binding = 1) uniform subpassInput samplerAlbedo;
 layout (input_attachment_index = 2, binding = 2) uniform subpassInput samplerPositionDepth;
 layout (binding = 4) uniform samplerCube samplerShadowCube;
+layout (binding = 5) uniform sampler2D samplerNormalMap;
 
 layout (location = 0) out vec4 outColor;
 
