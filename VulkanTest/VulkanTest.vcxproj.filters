@@ -66,7 +66,7 @@
     <ClCompile Include="systems\shadow_render_system.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
-    <ClCompile Include="systems\reflections_render_system.cpp">
+    <ClCompile Include="systems\mappings_render_system.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
   </ItemGroup>
@@ -128,7 +128,7 @@
     <ClInclude Include="systems\shadow_render_system.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="systems\reflections_render_system.hpp">
+    <ClInclude Include="systems\mappings_render_system.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
   </ItemGroup>
@@ -160,10 +160,10 @@
     <None Include="shaders\shadow_shader.vert">
       <Filter>Archivos de recursos</Filter>
     </None>
-    <None Include="shaders\reflections_shader.vert">
+    <None Include="shaders\mappings_shader.vert">
       <Filter>Archivos de recursos</Filter>
     </None>
-    <None Include="shaders\reflections_shader.frag">
+    <None Include="shaders\mappings_shader.frag">
       <Filter>Archivos de recursos</Filter>
     </None>
   </ItemGroup>

@@ -28,7 +28,7 @@ class Vk3dSwapChain {
          glm::vec3 lightPosition{ LIGHT_POSITION };
      };
 
-     struct ReflectionsUbo {
+     struct MappingsUbo {
          glm::mat4 projection{ 1.f };
          glm::mat4 view{ 1.f };
      };
@@ -64,11 +64,11 @@ class Vk3dSwapChain {
     };
 
     struct Samplers {
-        Sampler shadowOmni, reflectionsMap;
+        Sampler shadowOmni, mappingsMap;
     };
 
     struct Attachments {
-        FrameBufferAttachment normal, albedo, depth, shadowDepth, reflectionsMapDepth;
+        FrameBufferAttachment normal, albedo, depth, shadowDepth, mappingsMapDepth;
     };
 
   static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
@@ -77,6 +77,7 @@ class Vk3dSwapChain {
   static constexpr int SHADOW_MAP_HEIGHT = 1024;
 
   static constexpr int NUM_CUBE_FACES = 6;
+  static constexpr int MAPPINGS_ARRAY_LENGTH = 2;
 
   static constexpr VkFormat SHADOW_FB_COLOR_FORMAT = VK_FORMAT_R32_SFLOAT;
 
@@ -92,10 +93,10 @@ class Vk3dSwapChain {
   Vk3dSwapChain& operator=(const Vk3dSwapChain &) = delete;
 
   VkFramebuffer getShadowFrameBuffer(int index) { return shadowFramebuffers[index]; }
-  VkFramebuffer getReflectionsFrameBuffer(int index) { return reflectionsFramebuffers[index]; }
+  VkFramebuffer getMappingsFrameBuffer(int index) { return mappingsFramebuffers[index]; }
   VkFramebuffer getFrameBuffer(int index) { return swapChainFramebuffers[index]; }
   VkRenderPass getShadowRenderPass() { return shadowRenderPass; }
-  VkRenderPass getReflectionsRenderPass() { return reflectionsRenderPass; }
+  VkRenderPass getMappingsRenderPass() { return mappingsRenderPass; }
   VkRenderPass getRenderPass() { return renderPass; }
   VkImageView getImageView(int index) { return swapChainImageViews[index]; }
   size_t imageCount() { return swapChainImages.size(); }
@@ -125,15 +126,15 @@ class Vk3dSwapChain {
   size_t getCurrentFrame() { return currentFrame; }
 
   VkDescriptorSetLayout getShadowDescriptorSetLayout() { return shadowSetLayout->getDescriptorSetLayout(); };
-  VkDescriptorSetLayout getReflectionsDescriptorSetLayout() { return reflectionsSetLayout->getDescriptorSetLayout(); };
+  VkDescriptorSetLayout getMappingsDescriptorSetLayout() { return mappingsSetLayout->getDescriptorSetLayout(); };
   VkDescriptorSetLayout getGBufferDescriptorSetLayout() { return gBufferSetLayout->getDescriptorSetLayout(); };
   VkDescriptorSetLayout getCompositionDescriptorSetLayout() { return compositionSetLayout->getDescriptorSetLayout(); };
   VkDescriptorSet getCurrentShadowDescriptorSet(int currentImageIndex) { return shadowDescriptorSets[currentImageIndex]; };
-  VkDescriptorSet getCurrentReflectionsDescriptorSet(int currentImageIndex) { return reflectionsDescriptorSets[currentImageIndex]; };
+  VkDescriptorSet getCurrentMappingsDescriptorSet(int currentImageIndex) { return mappingsDescriptorSets[currentImageIndex]; };
   VkDescriptorSet getCurrentGBufferDescriptorSet(int currentImageIndex) { return gBufferDescriptorSets[currentImageIndex]; };
   VkDescriptorSet getCurrentCompositionDescriptorSet(int currentImageIndex) { return compositionDescriptorSets[currentImageIndex]; };
   void updateCurrentShadowUbo(void* data, int currentImageIndex);
-  void updateCurrentReflectionsUbo(void* data, int currentImageIndex);
+  void updateCurrentMappingsUbo(void* data, int currentImageIndex);
   void updateCurrentGBufferUbo(void* data, int currentImageIndex);
   void updateCurrentCompositionUbo(void* data, int currentImageIndex);
 
@@ -145,13 +146,13 @@ class Vk3dSwapChain {
   void createSampler(VkFormat format, VkImageUsageFlags usage, Sampler* attachment, VkExtent2D extent, VkImageViewType imageViewType = VK_IMAGE_VIEW_TYPE_2D, uint32_t arrayLayers = 1);
   void createAttachment(VkFormat format, VkImageUsageFlags usage, FrameBufferAttachment* attachment, VkExtent2D extent, VkImageViewType imageViewType = VK_IMAGE_VIEW_TYPE_2D, uint32_t arrayLayers = 1);
   void createShadowSampler();
-  void createReflectionsSampler();
+  void createMappingsSampler();
   void createCompositionRenderPass();
   void createShadowRenderPass();
-  void createReflectionsRenderPass();
+  void createMappingsRenderPass();
   void createCompositionFramebuffers();
   void createShadowFramebuffers();
-  void createReflectionsFramebuffers();
+  void createMappingsFramebuffers();
   void createSyncObjects();
   void destroyAttachment(FrameBufferAttachment* attachment);
   void destroySampler(Sampler* sampler);
@@ -177,8 +178,8 @@ class Vk3dSwapChain {
   std::vector<VkFramebuffer> shadowFramebuffers;
   VkRenderPass shadowRenderPass;
 
-  std::vector<VkFramebuffer> reflectionsFramebuffers;
-  VkRenderPass reflectionsRenderPass;
+  std::vector<VkFramebuffer> mappingsFramebuffers;
+  VkRenderPass mappingsRenderPass;
 
   std::vector<Samplers> samplersVector;
   std::vector<Attachments> attachmentsVector;
@@ -201,16 +202,16 @@ class Vk3dSwapChain {
   std::unique_ptr<Vk3dDescriptorSetLayout> gBufferSetLayout;
   std::unique_ptr<Vk3dDescriptorSetLayout> compositionSetLayout;
   std::unique_ptr<Vk3dDescriptorSetLayout> shadowSetLayout;
-  std::unique_ptr<Vk3dDescriptorSetLayout> reflectionsSetLayout;
+  std::unique_ptr<Vk3dDescriptorSetLayout> mappingsSetLayout;
   std::unique_ptr<Vk3dDescriptorPool> globalPool;
   std::vector<std::unique_ptr<Vk3dBuffer>> gBufferUboBuffers;
   std::vector<std::unique_ptr<Vk3dBuffer>> compositionUboBuffers;
   std::vector<std::unique_ptr<Vk3dBuffer>> shadowUboBuffers;
-  std::vector<std::unique_ptr<Vk3dBuffer>> reflectionsUboBuffers;
+  std::vector<std::unique_ptr<Vk3dBuffer>> mappingsUboBuffers;
   std::vector<VkDescriptorSet> gBufferDescriptorSets;
   std::vector<VkDescriptorSet> compositionDescriptorSets;
   std::vector<VkDescriptorSet> shadowDescriptorSets;
-  std::vector<VkDescriptorSet> reflectionsDescriptorSets;
+  std::vector<VkDescriptorSet> mappingsDescriptorSets;
 };
 
 }  // namespace vk3d

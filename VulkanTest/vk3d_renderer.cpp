@@ -181,14 +181,14 @@ namespace vk3d {
 		vkCmdEndRenderPass(commandBuffer);
 	}
 
-	void Vk3dRenderer::beginReflectionsRenderPass(VkCommandBuffer commandBuffer) {
+	void Vk3dRenderer::beginMappingsRenderPass(VkCommandBuffer commandBuffer) {
 		assert(isFrameStarted && "Can't call beginSwapChainRenderPass if frame is not in progress");
 		assert(commandBuffer == getCurrentCommandBuffer() && "Can't begin render pass on command buffer from a different frame");
 
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = vk3dSwapChain->getReflectionsRenderPass();
-		renderPassInfo.framebuffer = vk3dSwapChain->getReflectionsFrameBuffer(currentImageIndex);
+		renderPassInfo.renderPass = vk3dSwapChain->getMappingsRenderPass();
+		renderPassInfo.framebuffer = vk3dSwapChain->getMappingsFrameBuffer(currentImageIndex);
 
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent = vk3dSwapChain->getSwapChainExtent();
@@ -213,7 +213,7 @@ namespace vk3d {
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 	}
 
-	void Vk3dRenderer::endReflectionsRenderPass(VkCommandBuffer commandBuffer) {
+	void Vk3dRenderer::endMappingsRenderPass(VkCommandBuffer commandBuffer) {
 		assert(isFrameStarted && "Can't call endSwapChainRenderPass if frame is not in progress");
 		assert(commandBuffer == getCurrentCommandBuffer() && "Can't end render pass on command buffer from a different frame");
 		vkCmdEndRenderPass(commandBuffer);

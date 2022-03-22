@@ -4,7 +4,7 @@
 #include "vk3d_camera.hpp"
 #include "systems/shadow_render_system.hpp"
 #include "systems/simple_render_system.hpp"
-#include "systems/reflections_render_system.hpp"
+#include "systems/mappings_render_system.hpp"
 #include "systems/point_light_system.hpp"
 
 #include <math.h>
@@ -33,7 +33,7 @@ namespace vk3d {
 
 	void Vk3dApp::run() {
 		ShadowRenderSystem shadowRenderSystem{ vk3dDevice, vk3dRenderer.getShadowRenderPass(), vk3dRenderer.getShadowDescriptorSetLayout() };
-		ReflectionsRenderSystem reflectionsRenderSystem{ vk3dDevice, vk3dRenderer.getReflectionsRenderPass(), vk3dRenderer.getReflectionsDescriptorSetLayout() };
+		MappingsRenderSystem mappingsRenderSystem{ vk3dDevice, vk3dRenderer.getMappingsRenderPass(), vk3dRenderer.getMappingsDescriptorSetLayout() };
 		SimpleRenderSystem simpleRenderSystem{vk3dDevice, vk3dRenderer.getSwapChainRenderPass(), vk3dRenderer.getGBufferDescriptorSetLayout(), vk3dRenderer.getCompositionDescriptorSetLayout() };
 		PointLightSystem pointLightSystem{ vk3dDevice, vk3dRenderer.getSwapChainRenderPass(), vk3dRenderer.getGBufferDescriptorSetLayout(), vk3dRenderer.getCompositionDescriptorSetLayout() };
 		Vk3dCamera camera{};
@@ -50,7 +50,7 @@ namespace vk3d {
 		Vk3dSwapChain::ShadowUbo shadowUbo{};
 		Vk3dSwapChain::GBufferUbo gBufferUbo{};
 		Vk3dSwapChain::CompositionUbo compositionUbo{};
-		Vk3dSwapChain::ReflectionsUbo reflectionsUbo{};
+		Vk3dSwapChain::MappingsUbo mappingsUbo{};
 
 		viewerObject.transform.translation = Vk3dSwapChain::LIGHT_POSITION;
 		
@@ -112,7 +112,7 @@ namespace vk3d {
 					commandBuffer,
 					camera,
 					vk3dRenderer.getCurrentShadowDescriptorSet(),
-					vk3dRenderer.getCurrentReflectionsDescriptorSet(),
+					vk3dRenderer.getCurrentMappingsDescriptorSet(),
 					vk3dRenderer.getCurrentGBufferDescriptorSet(),
 					vk3dRenderer.getCurrentCompositionDescriptorSet(),
 					gameObjects
@@ -125,10 +125,10 @@ namespace vk3d {
 
 				vk3dRenderer.updateCurrentGBufferUbo(&gBufferUbo);
 
-				reflectionsUbo.projection = camera.getProjection();
-				reflectionsUbo.view = camera.getView();
+				mappingsUbo.projection = camera.getProjection();
+				mappingsUbo.view = camera.getView();
 
-				vk3dRenderer.updateCurrentReflectionsUbo(&reflectionsUbo);
+				vk3dRenderer.updateCurrentMappingsUbo(&mappingsUbo);
 
 				compositionUbo.viewPos = viewerObject.transform.translation;
 
@@ -139,10 +139,22 @@ namespace vk3d {
 				shadowRenderSystem.renderGameObjects(frameInfo);
 				vk3dRenderer.endShadowRenderPass(commandBuffer);
 
-				// render reflection maps
-				vk3dRenderer.beginReflectionsRenderPass(commandBuffer);
-				reflectionsRenderSystem.renderGameObjects(frameInfo);
-				vk3dRenderer.endReflectionsRenderPass(commandBuffer);
+				// render mappings
+				vk3dRenderer.beginMappingsRenderPass(commandBuffer);
+				mappingsRenderSystem.renderGameObjects(frameInfo);
+				vk3dRenderer.endMappingsRenderPass(commandBuffer);
+
+				vk3dRenderer.beginMappingsRenderPass(commandBuffer);
+				mappingsRenderSystem.renderGameObjects(frameInfo);
+				vk3dRenderer.endMappingsRenderPass(commandBuffer);
+
+				vk3dRenderer.beginMappingsRenderPass(commandBuffer);
+				mappingsRenderSystem.renderGameObjects(frameInfo);
+				vk3dRenderer.endMappingsRenderPass(commandBuffer);
+
+				vk3dRenderer.beginMappingsRenderPass(commandBuffer);
+				mappingsRenderSystem.renderGameObjects(frameInfo);
+				vk3dRenderer.endMappingsRenderPass(commandBuffer);
 
 				// render swap chain
 				vk3dRenderer.beginSwapChainRenderPass(commandBuffer);
@@ -222,7 +234,6 @@ namespace vk3d {
 		coloredCube3.transform.translation = { .5f, -1.f, 3.f };
 		coloredCube3.transform.scale = glm::vec3(0.5f, 1.f, 0.5f);
 		gameObjects.emplace(coloredCube3.getId(), std::move(coloredCube3));
-
 	}
 
 }

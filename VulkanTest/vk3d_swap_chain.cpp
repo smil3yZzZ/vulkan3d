@@ -27,13 +27,13 @@ void Vk3dSwapChain::init() {
     createSwapChain();
     createSwapChainImageViews();
     createShadowSampler();
-    createReflectionsSampler();
+    createMappingsSampler();
     createDeferredResources();
     createShadowRenderPass();
-    createReflectionsRenderPass();
+    createMappingsRenderPass();
     createCompositionRenderPass();
     createShadowFramebuffers();
-    createReflectionsFramebuffers();
+    createMappingsFramebuffers();
     createCompositionFramebuffers();
     createSyncObjects();
     createDescriptorPool();
@@ -55,20 +55,24 @@ Vk3dSwapChain::~Vk3dSwapChain() {
       destroyAttachment(&attachments.normal);
       destroyAttachment(&attachments.albedo);
       destroyAttachment(&attachments.depth);
-      destroyAttachment(&attachments.reflectionsMapDepth);
+      destroyAttachment(&attachments.mappingsMapDepth);
       destroyAttachment(&attachments.shadowDepth);
   }
   attachmentsVector.clear();
 
   for (auto& samplers : samplersVector) {
-      destroySampler(&samplers.reflectionsMap);
+      destroySampler(&samplers.mappingsMap);
       destroySampler(&samplers.shadowOmni);
   }
   samplersVector.clear();
   
 
   for (auto framebuffer : swapChainFramebuffers) {
-    vkDestroyFramebuffer(device.device(), framebuffer, nullptr);
+      vkDestroyFramebuffer(device.device(), framebuffer, nullptr);
+  }
+
+  for (auto framebuffer : mappingsFramebuffers) {
+      vkDestroyFramebuffer(device.device(), framebuffer, nullptr);
   }
 
   for (auto framebuffer : shadowFramebuffers) {
@@ -76,6 +80,7 @@ Vk3dSwapChain::~Vk3dSwapChain() {
   }
 
   vkDestroyRenderPass(device.device(), renderPass, nullptr);
+  vkDestroyRenderPass(device.device(), mappingsRenderPass, nullptr);
   vkDestroyRenderPass(device.device(), shadowRenderPass, nullptr);
 
   // cleanup synchronization objects
@@ -685,19 +690,19 @@ void Vk3dSwapChain::createShadowFramebuffers() {
 }
 
 
-void Vk3dSwapChain::createReflectionsSampler() {
+void Vk3dSwapChain::createMappingsSampler() {
     deferredResourcesFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
 
     for (auto& samplers : samplersVector) {
-        createSampler(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &samplers.reflectionsMap, swapChainExtent);
+        createSampler(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &samplers.mappingsMap, swapChainExtent, VK_IMAGE_VIEW_TYPE_2D_ARRAY, MAPPINGS_ARRAY_LENGTH);
     }
 
     for (auto& attachments : attachmentsVector) {
-        createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &attachments.reflectionsMapDepth, swapChainExtent);
+        createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &attachments.mappingsMapDepth, swapChainExtent, VK_IMAGE_VIEW_TYPE_2D_ARRAY, MAPPINGS_ARRAY_LENGTH);
     }
 }
 
-void Vk3dSwapChain::createReflectionsRenderPass() {
+void Vk3dSwapChain::createMappingsRenderPass() {
     std::array<VkAttachmentDescription, 2> attachments{};
 
     // View space position % normals attachment
@@ -762,8 +767,7 @@ void Vk3dSwapChain::createReflectionsRenderPass() {
     renderPassInfo.dependencyCount = dependencies.size();
     renderPassInfo.pDependencies = dependencies.data();
 
-    /*
-    uint32_t viewAndCorrelationMask = 0b00000011; //2 faces
+    uint32_t viewAndCorrelationMask = 0b00000011; //2 maps
 
     VkRenderPassMultiviewCreateInfo renderPassMultiviewInfo{};
     renderPassMultiviewInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO;
@@ -773,22 +777,21 @@ void Vk3dSwapChain::createReflectionsRenderPass() {
     renderPassMultiviewInfo.pCorrelationMasks = &viewAndCorrelationMask;
 
     renderPassInfo.pNext = &renderPassMultiviewInfo;
-    */
 
-    if (vkCreateRenderPass(device.device(), &renderPassInfo, nullptr, &reflectionsRenderPass) != VK_SUCCESS) {
+    if (vkCreateRenderPass(device.device(), &renderPassInfo, nullptr, &mappingsRenderPass) != VK_SUCCESS) {
         throw std::runtime_error("failed to create render pass!");
     }
 }
 
-void Vk3dSwapChain::createReflectionsFramebuffers() {
-    reflectionsFramebuffers.resize(imageCount());
+void Vk3dSwapChain::createMappingsFramebuffers() {
+    mappingsFramebuffers.resize(imageCount());
     VkExtent2D swapChainExtent = getSwapChainExtent();
     for (size_t i = 0; i < imageCount(); i++) {
-        std::array<VkImageView, 2> attachments = { samplersVector[i].reflectionsMap.attachment.view, attachmentsVector[i].reflectionsMapDepth.view };
+        std::array<VkImageView, 2> attachments = { samplersVector[i].mappingsMap.attachment.view, attachmentsVector[i].mappingsMapDepth.view };
 
         VkFramebufferCreateInfo framebufferInfo = {};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = reflectionsRenderPass;
+        framebufferInfo.renderPass = mappingsRenderPass;
         framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
         framebufferInfo.pAttachments = attachments.data();
         framebufferInfo.width = swapChainExtent.width;
@@ -799,7 +802,7 @@ void Vk3dSwapChain::createReflectionsFramebuffers() {
             device.device(),
             &framebufferInfo,
             nullptr,
-            &reflectionsFramebuffers[i]) != VK_SUCCESS) {
+            &mappingsFramebuffers[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create framebuffer!");
         }
     }
@@ -821,11 +824,11 @@ void Vk3dSwapChain::createDescriptorPool() {
 
 void Vk3dSwapChain::createUniformBuffers() {
     shadowUboBuffers.clear();
-    reflectionsUboBuffers.clear();
+    mappingsUboBuffers.clear();
     gBufferUboBuffers.clear();
     compositionUboBuffers.clear();
     shadowUboBuffers.resize(imageCount());
-    reflectionsUboBuffers.resize(imageCount());
+    mappingsUboBuffers.resize(imageCount());
     gBufferUboBuffers.resize(imageCount());
     compositionUboBuffers.resize(imageCount());
 
@@ -840,16 +843,16 @@ void Vk3dSwapChain::createUniformBuffers() {
             allocator
             );
         shadowUboBuffers[i]->map();
-        reflectionsUboBuffers[i] = std::make_unique<Vk3dBuffer>(
+        mappingsUboBuffers[i] = std::make_unique<Vk3dBuffer>(
             device,
-            sizeof(ReflectionsUbo),
+            sizeof(MappingsUbo),
             1,
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             VMA_MEMORY_USAGE_CPU_TO_GPU,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
             allocator
             );
-        reflectionsUboBuffers[i]->map();
+        mappingsUboBuffers[i]->map();
         gBufferUboBuffers[i] = std::make_unique<Vk3dBuffer>(
             device,
             sizeof(GBufferUbo),
@@ -872,17 +875,17 @@ void Vk3dSwapChain::createUniformBuffers() {
         compositionUboBuffers[i]->map();
     }
 
-    reflectionsSetLayout = Vk3dDescriptorSetLayout::Builder(device)
+    mappingsSetLayout = Vk3dDescriptorSetLayout::Builder(device)
         .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
         .build();
 
-    reflectionsDescriptorSets.clear();
-    reflectionsDescriptorSets.resize(imageCount());
-    for (int i = 0; i < reflectionsDescriptorSets.size(); i++) {
-        auto bufferInfo = reflectionsUboBuffers[i]->descriptorInfo();
-        Vk3dDescriptorWriter(*reflectionsSetLayout, *globalPool)
+    mappingsDescriptorSets.clear();
+    mappingsDescriptorSets.resize(imageCount());
+    for (int i = 0; i < mappingsDescriptorSets.size(); i++) {
+        auto bufferInfo = mappingsUboBuffers[i]->descriptorInfo();
+        Vk3dDescriptorWriter(*mappingsSetLayout, *globalPool)
             .writeBuffer(0, &bufferInfo)
-            .build(reflectionsDescriptorSets[i]);
+            .build(mappingsDescriptorSets[i]);
     }
 
     shadowSetLayout = Vk3dDescriptorSetLayout::Builder(device)
@@ -929,13 +932,14 @@ void Vk3dSwapChain::createUniformBuffers() {
         auto depthInfo = attachmentsVector[i].depth.descriptorInfo();
         auto bufferInfo = compositionUboBuffers[i]->descriptorInfo();
         auto shadowOmni = samplersVector[i].shadowOmni.attachment.descriptorInfo(samplersVector[i].shadowOmni.sampler);
-        auto reflectionsMap = samplersVector[i].reflectionsMap.attachment.descriptorInfo(samplersVector[i].reflectionsMap.sampler);
+        auto mappingsMap = samplersVector[i].mappingsMap.attachment.descriptorInfo(samplersVector[i].mappingsMap.sampler);
         Vk3dDescriptorWriter(*compositionSetLayout, *globalPool)
             .writeImage(0, &normalInfo)
             .writeImage(1, &albedoInfo)
             .writeImage(2, &depthInfo)
             .writeBuffer(3, &bufferInfo)
             .writeImage(4, &shadowOmni)
+            .writeImage(5, &mappingsMap)
             .build(compositionDescriptorSets[i]);
     }
 }
@@ -943,9 +947,9 @@ void Vk3dSwapChain::updateCurrentShadowUbo(void* data, int currentImageIndex) {
     shadowUboBuffers[currentImageIndex]->writeToBuffer(data);
     shadowUboBuffers[currentImageIndex]->flush();
 }
-void Vk3dSwapChain::updateCurrentReflectionsUbo(void* data, int currentImageIndex) {
-    reflectionsUboBuffers[currentImageIndex]->writeToBuffer(data);
-    reflectionsUboBuffers[currentImageIndex]->flush();
+void Vk3dSwapChain::updateCurrentMappingsUbo(void* data, int currentImageIndex) {
+    mappingsUboBuffers[currentImageIndex]->writeToBuffer(data);
+    mappingsUboBuffers[currentImageIndex]->flush();
 }
 void Vk3dSwapChain::updateCurrentGBufferUbo(void* data, int currentImageIndex) {
     gBufferUboBuffers[currentImageIndex]->writeToBuffer(data);

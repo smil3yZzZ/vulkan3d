@@ -21,7 +21,7 @@ namespace vk3d {
 
 		VkRenderPass getSwapChainRenderPass() const { return vk3dSwapChain->getRenderPass(); }
 		VkRenderPass getShadowRenderPass() const { return vk3dSwapChain->getShadowRenderPass(); }
-		VkRenderPass getReflectionsRenderPass() const { return vk3dSwapChain->getReflectionsRenderPass(); }
+		VkRenderPass getMappingsRenderPass() const { return vk3dSwapChain->getMappingsRenderPass(); }
 		float getAspectRatio() const { return vk3dSwapChain->extentAspectRatio(); };
 		float getShadowAspectRatio() const { return vk3dSwapChain->shadowExtentAspectRatio(); };
 		VkExtent2D getExtent() const { return vk3dSwapChain->getSwapChainExtent(); };
@@ -47,21 +47,21 @@ namespace vk3d {
 		void endShadowRenderPass(VkCommandBuffer commandBuffer);
 		void beginSwapChainRenderPass(VkCommandBuffer commandBuffer);
 		void endSwapChainRenderPass(VkCommandBuffer commandBuffer);
-		void beginReflectionsRenderPass(VkCommandBuffer commandBuffer);
-		void endReflectionsRenderPass(VkCommandBuffer commandBuffer);
+		void beginMappingsRenderPass(VkCommandBuffer commandBuffer);
+		void endMappingsRenderPass(VkCommandBuffer commandBuffer);
 
 		VkDescriptorSetLayout getShadowDescriptorSetLayout() { return vk3dSwapChain->getShadowDescriptorSetLayout(); };
 		VkDescriptorSetLayout getGBufferDescriptorSetLayout() { return vk3dSwapChain->getGBufferDescriptorSetLayout(); };
 		VkDescriptorSetLayout getCompositionDescriptorSetLayout() { return vk3dSwapChain->getCompositionDescriptorSetLayout(); };
-		VkDescriptorSetLayout getReflectionsDescriptorSetLayout() { return vk3dSwapChain->getReflectionsDescriptorSetLayout(); };
+		VkDescriptorSetLayout getMappingsDescriptorSetLayout() { return vk3dSwapChain->getMappingsDescriptorSetLayout(); };
 		VkDescriptorSet getCurrentShadowDescriptorSet() { return vk3dSwapChain->getCurrentShadowDescriptorSet(currentImageIndex); };
 		VkDescriptorSet getCurrentGBufferDescriptorSet() { return vk3dSwapChain->getCurrentGBufferDescriptorSet(currentImageIndex); };
 		VkDescriptorSet getCurrentCompositionDescriptorSet() { return vk3dSwapChain->getCurrentCompositionDescriptorSet(currentImageIndex);};
-		VkDescriptorSet getCurrentReflectionsDescriptorSet() { return vk3dSwapChain->getCurrentReflectionsDescriptorSet(currentImageIndex); };
+		VkDescriptorSet getCurrentMappingsDescriptorSet() { return vk3dSwapChain->getCurrentMappingsDescriptorSet(currentImageIndex); };
 		void updateCurrentShadowUbo(void* data) { return vk3dSwapChain->updateCurrentShadowUbo(data, currentImageIndex); };
 		void updateCurrentGBufferUbo(void* data) { return vk3dSwapChain->updateCurrentGBufferUbo(data, currentImageIndex); };
 		void updateCurrentCompositionUbo(void* data) { return vk3dSwapChain->updateCurrentCompositionUbo(data, currentImageIndex); };
-		void updateCurrentReflectionsUbo(void* data) { return vk3dSwapChain->updateCurrentReflectionsUbo(data, currentImageIndex); };
+		void updateCurrentMappingsUbo(void* data) { return vk3dSwapChain->updateCurrentMappingsUbo(data, currentImageIndex); };
 
 	private:
 		void createCommandBuffers();
