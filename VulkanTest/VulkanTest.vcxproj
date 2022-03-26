@@ -155,7 +155,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="systems\mappings_render_system.cpp" />
+    <ClCompile Include="systems\reflection_render_system.cpp" />
     <ClCompile Include="vk3d_app.cpp" />
     <ClCompile Include="keyboard_movement_controller.cpp" />
     <ClCompile Include="vk3d_allocator.cpp" />
@@ -175,7 +175,7 @@
     <ClCompile Include="systems\simple_render_system.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="systems\mappings_render_system.hpp" />
+    <ClInclude Include="systems\reflection_render_system.hpp" />
     <ClInclude Include="vk3d_app.hpp" />
     <ClInclude Include="keyboard_movement_controller.hpp" />
     <ClInclude Include="vk3d_allocator.hpp" />
@@ -197,6 +197,7 @@
     <ClInclude Include="vk_mem_alloc.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\README.md" />
     <None Include="compile.bat" />
     <None Include="shaders\composition_shader.frag" />
     <None Include="shaders\composition_shader.vert" />
@@ -208,6 +209,8 @@
     <None Include="shaders\mappings_shader.vert" />
     <None Include="shaders\shadow_shader.frag" />
     <None Include="shaders\shadow_shader.vert" />
+    <None Include="shaders\uv_reflection_shader.frag" />
+    <None Include="shaders\uv_reflection_shader.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

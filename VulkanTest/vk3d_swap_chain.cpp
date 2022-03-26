@@ -27,13 +27,16 @@ void Vk3dSwapChain::init() {
     createSwapChain();
     createSwapChainImageViews();
     createShadowSampler();
-    createMappingsSampler();
-    createDeferredResources();
     createShadowRenderPass();
-    createMappingsRenderPass();
-    createCompositionRenderPass();
     createShadowFramebuffers();
+    createMappingsSampler();
+    createMappingsRenderPass();
     createMappingsFramebuffers();
+    createUVMapSampler();
+    createUVMapRenderPass();
+    createUVMapFramebuffers();
+    createDeferredResources();
+    createCompositionRenderPass();
     createCompositionFramebuffers();
     createSyncObjects();
     createDescriptorPool();
@@ -56,11 +59,13 @@ Vk3dSwapChain::~Vk3dSwapChain() {
       destroyAttachment(&attachments.albedo);
       destroyAttachment(&attachments.depth);
       destroyAttachment(&attachments.mappingsMapDepth);
+      destroyAttachment(&attachments.uvReflectionMapDepth);
       destroyAttachment(&attachments.shadowDepth);
   }
   attachmentsVector.clear();
 
   for (auto& samplers : samplersVector) {
+      destroySampler(&samplers.uvReflectionMap);
       destroySampler(&samplers.mappingsMap);
       destroySampler(&samplers.shadowOmni);
   }
@@ -75,11 +80,16 @@ Vk3dSwapChain::~Vk3dSwapChain() {
       vkDestroyFramebuffer(device.device(), framebuffer, nullptr);
   }
 
+  for (auto framebuffer : uvReflectionFramebuffers) {
+      vkDestroyFramebuffer(device.device(), framebuffer, nullptr);
+  }
+
   for (auto framebuffer : shadowFramebuffers) {
       vkDestroyFramebuffer(device.device(), framebuffer, nullptr);
   }
 
   vkDestroyRenderPass(device.device(), renderPass, nullptr);
+  vkDestroyRenderPass(device.device(), uvReflectionRenderPass, nullptr);
   vkDestroyRenderPass(device.device(), mappingsRenderPass, nullptr);
   vkDestroyRenderPass(device.device(), shadowRenderPass, nullptr);
 
@@ -244,6 +254,361 @@ void Vk3dSwapChain::createSwapChainImageViews() {
   }
 }
 
+void Vk3dSwapChain::createShadowSampler() {
+    VkExtent2D shadowMapExtent = getShadowMapExtent();
+
+    for (auto& samplers : samplersVector) {
+        createSampler(SHADOW_FB_COLOR_FORMAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &samplers.shadowOmni, shadowMapExtent, VK_IMAGE_VIEW_TYPE_CUBE, NUM_CUBE_FACES);
+    }
+
+    for (auto& attachments : attachmentsVector) {
+        createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &attachments.shadowDepth, shadowMapExtent, VK_IMAGE_VIEW_TYPE_CUBE, NUM_CUBE_FACES);
+    }
+}
+
+void Vk3dSwapChain::createShadowRenderPass() {
+    std::array<VkAttachmentDescription, 2> attachments{};
+
+    // Position attachment (shadow)
+    attachments[0].format = SHADOW_FB_COLOR_FORMAT;
+    attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[0].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    attachments[0].flags = 0;
+
+    // Depth attachment (shadow)
+    attachments[1].format = findDepthFormat();
+    attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    attachments[1].flags = 0;
+
+    // One subpass
+    std::array<VkSubpassDescription, 1> subpassDescriptions{};
+
+    VkAttachmentReference colorReferences[1];
+    colorReferences[0] = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+    VkAttachmentReference depthReference = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+
+    subpassDescriptions[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpassDescriptions[0].colorAttachmentCount = 1;
+    subpassDescriptions[0].pColorAttachments = colorReferences;
+    subpassDescriptions[0].pDepthStencilAttachment = &depthReference;
+
+    // Subpass dependencies for layout transitions
+    std::array<VkSubpassDependency, 2> dependencies;
+
+    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass = 0;
+    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependencies[0].srcAccessMask = 0;
+    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    dependencies[1].srcSubpass = 0;
+    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    VkRenderPassCreateInfo renderPassInfo = {};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    renderPassInfo.pAttachments = attachments.data();
+    renderPassInfo.subpassCount = subpassDescriptions.size();
+    renderPassInfo.pSubpasses = subpassDescriptions.data();
+    renderPassInfo.dependencyCount = dependencies.size();
+    renderPassInfo.pDependencies = dependencies.data();
+
+    uint32_t viewAndCorrelationMask = 0b00111111; //6 faces
+
+    VkRenderPassMultiviewCreateInfo renderPassMultiviewInfo{};
+    renderPassMultiviewInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO;
+    renderPassMultiviewInfo.subpassCount = 1;
+    renderPassMultiviewInfo.pViewMasks = &viewAndCorrelationMask;
+    renderPassMultiviewInfo.correlationMaskCount = 1;
+    renderPassMultiviewInfo.pCorrelationMasks = &viewAndCorrelationMask;
+
+    renderPassInfo.pNext = &renderPassMultiviewInfo;
+
+    if (vkCreateRenderPass(device.device(), &renderPassInfo, nullptr, &shadowRenderPass) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create render pass!");
+    }
+}
+
+void Vk3dSwapChain::createShadowFramebuffers() {
+    shadowFramebuffers.resize(imageCount());
+    VkExtent2D shadowMapExtent = getShadowMapExtent();
+    for (size_t i = 0; i < imageCount(); i++) {
+        std::array<VkImageView, 2> attachments = { samplersVector[i].shadowOmni.attachment.view, attachmentsVector[i].shadowDepth.view };
+
+        VkFramebufferCreateInfo framebufferInfo = {};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = shadowRenderPass;
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebufferInfo.pAttachments = attachments.data();
+        framebufferInfo.width = shadowMapExtent.width;
+        framebufferInfo.height = shadowMapExtent.height;
+        framebufferInfo.layers = 1;
+
+        if (vkCreateFramebuffer(
+            device.device(),
+            &framebufferInfo,
+            nullptr,
+            &shadowFramebuffers[i]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create framebuffer!");
+        }
+    }
+}
+
+void Vk3dSwapChain::createMappingsSampler() {
+    deferredResourcesFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
+
+    for (auto& samplers : samplersVector) {
+        createSampler(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &samplers.mappingsMap, swapChainExtent, VK_IMAGE_VIEW_TYPE_2D_ARRAY, MAPPINGS_ARRAY_LENGTH);
+    }
+
+    for (auto& attachments : attachmentsVector) {
+        createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &attachments.mappingsMapDepth, swapChainExtent, VK_IMAGE_VIEW_TYPE_2D_ARRAY, MAPPINGS_ARRAY_LENGTH);
+    }
+}
+
+void Vk3dSwapChain::createMappingsRenderPass() {
+    std::array<VkAttachmentDescription, 2> attachments{};
+
+    // View space position % normals attachment
+    attachments[0].format = deferredResourcesFormat;
+    attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[0].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    attachments[0].flags = 0;
+
+    // Depth attachment (shadow)
+    attachments[1].format = findDepthFormat();
+    attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    attachments[1].flags = 0;
+
+    // One subpass
+    std::array<VkSubpassDescription, 1> subpassDescriptions{};
+
+    VkAttachmentReference colorReferences[1];
+    colorReferences[0] = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+    VkAttachmentReference depthReference = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+
+    subpassDescriptions[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpassDescriptions[0].colorAttachmentCount = 1;
+    subpassDescriptions[0].pColorAttachments = colorReferences;
+    subpassDescriptions[0].pDepthStencilAttachment = &depthReference;
+
+    // Subpass dependencies for layout transitions
+    std::array<VkSubpassDependency, 2> dependencies;
+
+    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass = 0;
+    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependencies[0].srcAccessMask = 0;
+    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    dependencies[1].srcSubpass = 0;
+    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    VkRenderPassCreateInfo renderPassInfo = {};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    renderPassInfo.pAttachments = attachments.data();
+    renderPassInfo.subpassCount = subpassDescriptions.size();
+    renderPassInfo.pSubpasses = subpassDescriptions.data();
+    renderPassInfo.dependencyCount = dependencies.size();
+    renderPassInfo.pDependencies = dependencies.data();
+
+    uint32_t viewAndCorrelationMask = 0b00000011; //2 maps
+
+    VkRenderPassMultiviewCreateInfo renderPassMultiviewInfo{};
+    renderPassMultiviewInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO;
+    renderPassMultiviewInfo.subpassCount = 1;
+    renderPassMultiviewInfo.pViewMasks = &viewAndCorrelationMask;
+    renderPassMultiviewInfo.correlationMaskCount = 1;
+    renderPassMultiviewInfo.pCorrelationMasks = &viewAndCorrelationMask;
+
+    renderPassInfo.pNext = &renderPassMultiviewInfo;
+
+    if (vkCreateRenderPass(device.device(), &renderPassInfo, nullptr, &mappingsRenderPass) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create render pass!");
+    }
+}
+
+void Vk3dSwapChain::createMappingsFramebuffers() {
+    mappingsFramebuffers.resize(imageCount());
+    VkExtent2D swapChainExtent = getSwapChainExtent();
+    for (size_t i = 0; i < imageCount(); i++) {
+        std::array<VkImageView, 2> attachments = { samplersVector[i].mappingsMap.attachment.view, attachmentsVector[i].mappingsMapDepth.view };
+
+        VkFramebufferCreateInfo framebufferInfo = {};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = mappingsRenderPass;
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebufferInfo.pAttachments = attachments.data();
+        framebufferInfo.width = swapChainExtent.width;
+        framebufferInfo.height = swapChainExtent.height;
+        framebufferInfo.layers = 1;
+
+        if (vkCreateFramebuffer(
+            device.device(),
+            &framebufferInfo,
+            nullptr,
+            &mappingsFramebuffers[i]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create framebuffer!");
+        }
+    }
+}
+
+void Vk3dSwapChain::createUVMapSampler() {
+    deferredResourcesFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
+
+    for (auto& samplers : samplersVector) {
+        createSampler(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &samplers.uvReflectionMap, swapChainExtent);
+    }
+
+    for (auto& attachments : attachmentsVector) {
+        createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &attachments.uvReflectionMapDepth, swapChainExtent);
+    }
+}
+
+void Vk3dSwapChain::createUVMapRenderPass() {
+    std::array<VkAttachmentDescription, 2> attachments{};
+
+    // View space position & normals attachment
+    attachments[0].format = deferredResourcesFormat;
+    attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[0].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    attachments[0].flags = 0;
+
+    // Depth attachment (shadow)
+    attachments[1].format = findDepthFormat();
+    attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    attachments[1].flags = 0;
+
+    // One subpass
+    std::array<VkSubpassDescription, 1> subpassDescriptions{};
+
+    VkAttachmentReference colorReferences[1];
+    colorReferences[0] = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+    VkAttachmentReference depthReference = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+
+    subpassDescriptions[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpassDescriptions[0].colorAttachmentCount = 1;
+    subpassDescriptions[0].pColorAttachments = colorReferences;
+    subpassDescriptions[0].pDepthStencilAttachment = &depthReference;
+
+    // Subpass dependencies for layout transitions
+    std::array<VkSubpassDependency, 2> dependencies;
+
+    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass = 0;
+    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependencies[0].srcAccessMask = 0;
+    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    dependencies[1].srcSubpass = 0;
+    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    VkRenderPassCreateInfo renderPassInfo = {};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    renderPassInfo.pAttachments = attachments.data();
+    renderPassInfo.subpassCount = subpassDescriptions.size();
+    renderPassInfo.pSubpasses = subpassDescriptions.data();
+    renderPassInfo.dependencyCount = dependencies.size();
+    renderPassInfo.pDependencies = dependencies.data();
+
+    if (vkCreateRenderPass(device.device(), &renderPassInfo, nullptr, &uvReflectionRenderPass) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create render pass!");
+    }
+}
+
+void Vk3dSwapChain::createUVMapFramebuffers() {
+    uvReflectionFramebuffers.resize(imageCount());
+    VkExtent2D swapChainExtent = getSwapChainExtent();
+    for (size_t i = 0; i < imageCount(); i++) {
+        std::array<VkImageView, 2> attachments = { samplersVector[i].uvReflectionMap.attachment.view, attachmentsVector[i].uvReflectionMapDepth.view };
+
+        VkFramebufferCreateInfo framebufferInfo = {};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = uvReflectionRenderPass;
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebufferInfo.pAttachments = attachments.data();
+        framebufferInfo.width = swapChainExtent.width;
+        framebufferInfo.height = swapChainExtent.height;
+        framebufferInfo.layers = 1;
+
+        if (vkCreateFramebuffer(
+            device.device(),
+            &framebufferInfo,
+            nullptr,
+            &uvReflectionFramebuffers[i]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create framebuffer!");
+        }
+    }
+}
+
+void Vk3dSwapChain::createDeferredResources() {
+    VkExtent2D swapChainExtent = getSwapChainExtent();
+
+    attachmentsVector.resize(imageCount());
+
+    for (auto& attachments : attachmentsVector) {
+        createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.normal, swapChainExtent);
+        createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.albedo, swapChainExtent);
+        createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.depth, swapChainExtent);
+    }
+}
+
 void Vk3dSwapChain::createCompositionRenderPass() {
   std::array<VkAttachmentDescription, 4> attachments {};
 
@@ -382,18 +747,6 @@ void Vk3dSwapChain::createCompositionFramebuffers() {
       throw std::runtime_error("failed to create framebuffer!");
     }
   }
-}
-
-void Vk3dSwapChain::createDeferredResources() {
-    VkExtent2D swapChainExtent = getSwapChainExtent();
-
-    attachmentsVector.resize(imageCount());
-
-    for (auto& attachments : attachmentsVector) {
-        createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.normal, swapChainExtent);
-        createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.albedo, swapChainExtent);
-        createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.depth, swapChainExtent);
-    }   
 }
 
 void Vk3dSwapChain::createSampler(VkFormat format, VkImageUsageFlags usage, Sampler* sampler, VkExtent2D extent, VkImageViewType imageViewType, uint32_t arrayLayers) {
@@ -571,242 +924,6 @@ VkDescriptorImageInfo Vk3dSwapChain::FrameBufferAttachment::descriptorInfo(VkSam
     };
 }
 
-void Vk3dSwapChain::createShadowSampler() {
-    VkExtent2D shadowMapExtent = getShadowMapExtent();
-
-    for (auto& samplers : samplersVector) {
-        createSampler(SHADOW_FB_COLOR_FORMAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &samplers.shadowOmni, shadowMapExtent, VK_IMAGE_VIEW_TYPE_CUBE, NUM_CUBE_FACES);
-    }
-
-    for (auto& attachments: attachmentsVector) {
-        createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &attachments.shadowDepth, shadowMapExtent, VK_IMAGE_VIEW_TYPE_CUBE, NUM_CUBE_FACES);
-    }
-}
-
-void Vk3dSwapChain::createShadowRenderPass() {
-    std::array<VkAttachmentDescription, 2> attachments{};
-
-    // Position attachment (shadow)
-    attachments[0].format = SHADOW_FB_COLOR_FORMAT;
-    attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
-    attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    attachments[0].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    attachments[0].flags = 0;
-
-    // Depth attachment (shadow)
-    attachments[1].format = findDepthFormat();
-    attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
-    attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    attachments[1].flags = 0;
-
-    // One subpass
-    std::array<VkSubpassDescription, 1> subpassDescriptions{};
-
-    VkAttachmentReference colorReferences[1];
-    colorReferences[0] = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-    VkAttachmentReference depthReference = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-
-    subpassDescriptions[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpassDescriptions[0].colorAttachmentCount = 1;
-    subpassDescriptions[0].pColorAttachments = colorReferences;
-    subpassDescriptions[0].pDepthStencilAttachment = &depthReference;
-
-    // Subpass dependencies for layout transitions
-    std::array<VkSubpassDependency, 2> dependencies;
-
-    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependencies[0].dstSubpass = 0;
-    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    dependencies[0].srcAccessMask = 0;
-    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-    dependencies[1].srcSubpass = 0;
-    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-    VkRenderPassCreateInfo renderPassInfo = {};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-    renderPassInfo.pAttachments = attachments.data();
-    renderPassInfo.subpassCount = subpassDescriptions.size();
-    renderPassInfo.pSubpasses = subpassDescriptions.data();
-    renderPassInfo.dependencyCount = dependencies.size();
-    renderPassInfo.pDependencies = dependencies.data();
-
-    uint32_t viewAndCorrelationMask = 0b00111111; //6 faces
-
-    VkRenderPassMultiviewCreateInfo renderPassMultiviewInfo{};
-    renderPassMultiviewInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO;
-    renderPassMultiviewInfo.subpassCount = 1;
-    renderPassMultiviewInfo.pViewMasks = &viewAndCorrelationMask;
-    renderPassMultiviewInfo.correlationMaskCount = 1;
-    renderPassMultiviewInfo.pCorrelationMasks = &viewAndCorrelationMask;
-
-    renderPassInfo.pNext = &renderPassMultiviewInfo;
-
-    if (vkCreateRenderPass(device.device(), &renderPassInfo, nullptr, &shadowRenderPass) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create render pass!");
-    }
-}
-
-void Vk3dSwapChain::createShadowFramebuffers() {
-    shadowFramebuffers.resize(imageCount());
-    VkExtent2D shadowMapExtent = getShadowMapExtent();
-    for (size_t i = 0; i < imageCount(); i++) {
-        std::array<VkImageView, 2> attachments = { samplersVector[i].shadowOmni.attachment.view, attachmentsVector[i].shadowDepth.view};
-
-        VkFramebufferCreateInfo framebufferInfo = {};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = shadowRenderPass;
-        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        framebufferInfo.pAttachments = attachments.data();
-        framebufferInfo.width = shadowMapExtent.width;
-        framebufferInfo.height = shadowMapExtent.height;
-        framebufferInfo.layers = 1;
-
-        if (vkCreateFramebuffer(
-            device.device(),
-            &framebufferInfo,
-            nullptr,
-            &shadowFramebuffers[i]) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create framebuffer!");
-        }
-    }
-}
-
-
-void Vk3dSwapChain::createMappingsSampler() {
-    deferredResourcesFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
-
-    for (auto& samplers : samplersVector) {
-        createSampler(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &samplers.mappingsMap, swapChainExtent, VK_IMAGE_VIEW_TYPE_2D_ARRAY, MAPPINGS_ARRAY_LENGTH);
-    }
-
-    for (auto& attachments : attachmentsVector) {
-        createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, &attachments.mappingsMapDepth, swapChainExtent, VK_IMAGE_VIEW_TYPE_2D_ARRAY, MAPPINGS_ARRAY_LENGTH);
-    }
-}
-
-void Vk3dSwapChain::createMappingsRenderPass() {
-    std::array<VkAttachmentDescription, 2> attachments{};
-
-    // View space position % normals attachment
-    attachments[0].format = deferredResourcesFormat;
-    attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
-    attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    attachments[0].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    attachments[0].flags = 0;
-
-    // Depth attachment (shadow)
-    attachments[1].format = findDepthFormat();
-    attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
-    attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    attachments[1].flags = 0;
-
-    // One subpass
-    std::array<VkSubpassDescription, 1> subpassDescriptions{};
-
-    VkAttachmentReference colorReferences[1];
-    colorReferences[0] = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-    VkAttachmentReference depthReference = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-
-    subpassDescriptions[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpassDescriptions[0].colorAttachmentCount = 1;
-    subpassDescriptions[0].pColorAttachments = colorReferences;
-    subpassDescriptions[0].pDepthStencilAttachment = &depthReference;
-
-    // Subpass dependencies for layout transitions
-    std::array<VkSubpassDependency, 2> dependencies;
-
-    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependencies[0].dstSubpass = 0;
-    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    dependencies[0].srcAccessMask = 0;
-    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-    dependencies[1].srcSubpass = 0;
-    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-    VkRenderPassCreateInfo renderPassInfo = {};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-    renderPassInfo.pAttachments = attachments.data();
-    renderPassInfo.subpassCount = subpassDescriptions.size();
-    renderPassInfo.pSubpasses = subpassDescriptions.data();
-    renderPassInfo.dependencyCount = dependencies.size();
-    renderPassInfo.pDependencies = dependencies.data();
-
-    uint32_t viewAndCorrelationMask = 0b00000011; //2 maps
-
-    VkRenderPassMultiviewCreateInfo renderPassMultiviewInfo{};
-    renderPassMultiviewInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO;
-    renderPassMultiviewInfo.subpassCount = 1;
-    renderPassMultiviewInfo.pViewMasks = &viewAndCorrelationMask;
-    renderPassMultiviewInfo.correlationMaskCount = 1;
-    renderPassMultiviewInfo.pCorrelationMasks = &viewAndCorrelationMask;
-
-    renderPassInfo.pNext = &renderPassMultiviewInfo;
-
-    if (vkCreateRenderPass(device.device(), &renderPassInfo, nullptr, &mappingsRenderPass) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create render pass!");
-    }
-}
-
-void Vk3dSwapChain::createMappingsFramebuffers() {
-    mappingsFramebuffers.resize(imageCount());
-    VkExtent2D swapChainExtent = getSwapChainExtent();
-    for (size_t i = 0; i < imageCount(); i++) {
-        std::array<VkImageView, 2> attachments = { samplersVector[i].mappingsMap.attachment.view, attachmentsVector[i].mappingsMapDepth.view };
-
-        VkFramebufferCreateInfo framebufferInfo = {};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = mappingsRenderPass;
-        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        framebufferInfo.pAttachments = attachments.data();
-        framebufferInfo.width = swapChainExtent.width;
-        framebufferInfo.height = swapChainExtent.height;
-        framebufferInfo.layers = 1;
-
-        if (vkCreateFramebuffer(
-            device.device(),
-            &framebufferInfo,
-            nullptr,
-            &mappingsFramebuffers[i]) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create framebuffer!");
-        }
-    }
-}
 
 void Vk3dSwapChain::destroySampler(Sampler* sampler) {
     destroyAttachment(&sampler->attachment);
@@ -815,8 +932,8 @@ void Vk3dSwapChain::destroySampler(Sampler* sampler) {
 
 void Vk3dSwapChain::createDescriptorPool() {
     globalPool = Vk3dDescriptorPool::Builder(device)
-        .setMaxSets(4 * imageCount())
-        .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4 * imageCount())
+        .setMaxSets(5 * imageCount())
+        .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 5 * imageCount())
         .addPoolSize(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 3 * imageCount())
         .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 * imageCount())
         .build();
@@ -825,10 +942,12 @@ void Vk3dSwapChain::createDescriptorPool() {
 void Vk3dSwapChain::createUniformBuffers() {
     shadowUboBuffers.clear();
     mappingsUboBuffers.clear();
+    uvReflectionUboBuffers.clear();
     gBufferUboBuffers.clear();
     compositionUboBuffers.clear();
     shadowUboBuffers.resize(imageCount());
     mappingsUboBuffers.resize(imageCount());
+    uvReflectionUboBuffers.resize(imageCount());
     gBufferUboBuffers.resize(imageCount());
     compositionUboBuffers.resize(imageCount());
 
@@ -853,6 +972,16 @@ void Vk3dSwapChain::createUniformBuffers() {
             allocator
             );
         mappingsUboBuffers[i]->map();
+        uvReflectionUboBuffers[i] = std::make_unique<Vk3dBuffer>(
+            device,
+            sizeof(UVReflectionUbo),
+            1,
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VMA_MEMORY_USAGE_CPU_TO_GPU,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+            allocator
+            );
+        uvReflectionUboBuffers[i]->map();
         gBufferUboBuffers[i] = std::make_unique<Vk3dBuffer>(
             device,
             sizeof(GBufferUbo),
@@ -875,6 +1004,19 @@ void Vk3dSwapChain::createUniformBuffers() {
         compositionUboBuffers[i]->map();
     }
 
+    shadowSetLayout = Vk3dDescriptorSetLayout::Builder(device)
+        .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+        .build();
+
+    shadowDescriptorSets.clear();
+    shadowDescriptorSets.resize(imageCount());
+    for (int i = 0; i < shadowDescriptorSets.size(); i++) {
+        auto bufferInfo = shadowUboBuffers[i]->descriptorInfo();
+        Vk3dDescriptorWriter(*shadowSetLayout, *globalPool)
+            .writeBuffer(0, &bufferInfo)
+            .build(shadowDescriptorSets[i]);
+    }
+
     mappingsSetLayout = Vk3dDescriptorSetLayout::Builder(device)
         .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
         .build();
@@ -888,17 +1030,20 @@ void Vk3dSwapChain::createUniformBuffers() {
             .build(mappingsDescriptorSets[i]);
     }
 
-    shadowSetLayout = Vk3dDescriptorSetLayout::Builder(device)
-        .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+    uvReflectionSetLayout = Vk3dDescriptorSetLayout::Builder(device)
+        .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+        .addBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
         .build();
 
-    shadowDescriptorSets.clear();
-    shadowDescriptorSets.resize(imageCount());
-    for (int i = 0; i < shadowDescriptorSets.size(); i++) {
-        auto bufferInfo = shadowUboBuffers[i]->descriptorInfo();
-        Vk3dDescriptorWriter(*shadowSetLayout, *globalPool)
+    uvReflectionDescriptorSets.clear();
+    uvReflectionDescriptorSets.resize(imageCount());
+    for (int i = 0; i < uvReflectionDescriptorSets.size(); i++) {
+        auto bufferInfo = uvReflectionUboBuffers[i]->descriptorInfo();
+        auto mappingsMap = samplersVector[i].mappingsMap.attachment.descriptorInfo(samplersVector[i].mappingsMap.sampler);
+        Vk3dDescriptorWriter(*uvReflectionSetLayout, *globalPool)
             .writeBuffer(0, &bufferInfo)
-            .build(shadowDescriptorSets[i]);
+            .writeImage(1, &mappingsMap)
+            .build(uvReflectionDescriptorSets[i]);
     }
 
     gBufferSetLayout = Vk3dDescriptorSetLayout::Builder(device)
@@ -920,7 +1065,6 @@ void Vk3dSwapChain::createUniformBuffers() {
         .addBinding(2, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_SHADER_STAGE_FRAGMENT_BIT)
         .addBinding(3, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
         .addBinding(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-        .addBinding(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
         .build();
 
     compositionDescriptorSets.clear();
@@ -932,14 +1076,12 @@ void Vk3dSwapChain::createUniformBuffers() {
         auto depthInfo = attachmentsVector[i].depth.descriptorInfo();
         auto bufferInfo = compositionUboBuffers[i]->descriptorInfo();
         auto shadowOmni = samplersVector[i].shadowOmni.attachment.descriptorInfo(samplersVector[i].shadowOmni.sampler);
-        auto mappingsMap = samplersVector[i].mappingsMap.attachment.descriptorInfo(samplersVector[i].mappingsMap.sampler);
         Vk3dDescriptorWriter(*compositionSetLayout, *globalPool)
             .writeImage(0, &normalInfo)
             .writeImage(1, &albedoInfo)
             .writeImage(2, &depthInfo)
             .writeBuffer(3, &bufferInfo)
             .writeImage(4, &shadowOmni)
-            .writeImage(5, &mappingsMap)
             .build(compositionDescriptorSets[i]);
     }
 }
@@ -950,6 +1092,10 @@ void Vk3dSwapChain::updateCurrentShadowUbo(void* data, int currentImageIndex) {
 void Vk3dSwapChain::updateCurrentMappingsUbo(void* data, int currentImageIndex) {
     mappingsUboBuffers[currentImageIndex]->writeToBuffer(data);
     mappingsUboBuffers[currentImageIndex]->flush();
+}
+void Vk3dSwapChain::updateCurrentUVReflectionUbo(void* data, int currentImageIndex) {
+    uvReflectionUboBuffers[currentImageIndex]->writeToBuffer(data);
+    uvReflectionUboBuffers[currentImageIndex]->flush();
 }
 void Vk3dSwapChain::updateCurrentGBufferUbo(void* data, int currentImageIndex) {
     gBufferUboBuffers[currentImageIndex]->writeToBuffer(data);

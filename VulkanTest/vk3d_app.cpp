@@ -4,7 +4,7 @@
 #include "vk3d_camera.hpp"
 #include "systems/shadow_render_system.hpp"
 #include "systems/simple_render_system.hpp"
-#include "systems/mappings_render_system.hpp"
+#include "systems/reflection_render_system.hpp"
 #include "systems/point_light_system.hpp"
 
 #include <math.h>
@@ -33,7 +33,7 @@ namespace vk3d {
 
 	void Vk3dApp::run() {
 		ShadowRenderSystem shadowRenderSystem{ vk3dDevice, vk3dRenderer.getShadowRenderPass(), vk3dRenderer.getShadowDescriptorSetLayout() };
-		MappingsRenderSystem mappingsRenderSystem{ vk3dDevice, vk3dRenderer.getMappingsRenderPass(), vk3dRenderer.getMappingsDescriptorSetLayout() };
+		ReflectionRenderSystem reflectionRenderSystem{ vk3dDevice, vk3dRenderer.getMappingsRenderPass(), vk3dRenderer.getMappingsDescriptorSetLayout(), vk3dRenderer.getUVReflectionRenderPass(), vk3dRenderer.getUVReflectionDescriptorSetLayout() };
 		SimpleRenderSystem simpleRenderSystem{vk3dDevice, vk3dRenderer.getSwapChainRenderPass(), vk3dRenderer.getGBufferDescriptorSetLayout(), vk3dRenderer.getCompositionDescriptorSetLayout() };
 		PointLightSystem pointLightSystem{ vk3dDevice, vk3dRenderer.getSwapChainRenderPass(), vk3dRenderer.getGBufferDescriptorSetLayout(), vk3dRenderer.getCompositionDescriptorSetLayout() };
 		Vk3dCamera camera{};
@@ -51,6 +51,7 @@ namespace vk3d {
 		Vk3dSwapChain::GBufferUbo gBufferUbo{};
 		Vk3dSwapChain::CompositionUbo compositionUbo{};
 		Vk3dSwapChain::MappingsUbo mappingsUbo{};
+		Vk3dSwapChain::UVReflectionUbo uvReflectionUbo{};
 
 		viewerObject.transform.translation = Vk3dSwapChain::LIGHT_POSITION;
 		
@@ -87,6 +88,10 @@ namespace vk3d {
 			shadowUbo.projectionView[faceIndex] = light.getProjection() * light.getView();
 		}
 
+		VkExtent2D extent = vk3dRenderer.getExtent();
+		glm::vec2 invResolution = glm::vec2(1.f / extent.width, 1.f / extent.height);
+		uvReflectionUbo.invResolution = invResolution;
+
 		while (!vk3dWindow.shouldClose()) {
 			glfwPollEvents();
 
@@ -113,6 +118,7 @@ namespace vk3d {
 					camera,
 					vk3dRenderer.getCurrentShadowDescriptorSet(),
 					vk3dRenderer.getCurrentMappingsDescriptorSet(),
+					vk3dRenderer.getCurrentUVReflectionDescriptorSet(),
 					vk3dRenderer.getCurrentGBufferDescriptorSet(),
 					vk3dRenderer.getCurrentCompositionDescriptorSet(),
 					gameObjects
@@ -130,6 +136,11 @@ namespace vk3d {
 
 				vk3dRenderer.updateCurrentMappingsUbo(&mappingsUbo);
 
+				uvReflectionUbo.projection = camera.getProjection();
+				uvReflectionUbo.view = camera.getView();
+
+				vk3dRenderer.updateCurrentUVReflectionUbo(&uvReflectionUbo);
+
 				compositionUbo.viewPos = viewerObject.transform.translation;
 
 				vk3dRenderer.updateCurrentCompositionUbo(&compositionUbo);
@@ -141,25 +152,17 @@ namespace vk3d {
 
 				// render mappings
 				vk3dRenderer.beginMappingsRenderPass(commandBuffer);
-				mappingsRenderSystem.renderGameObjects(frameInfo);
+				reflectionRenderSystem.renderMappings(frameInfo);
 				vk3dRenderer.endMappingsRenderPass(commandBuffer);
 
-				vk3dRenderer.beginMappingsRenderPass(commandBuffer);
-				mappingsRenderSystem.renderGameObjects(frameInfo);
-				vk3dRenderer.endMappingsRenderPass(commandBuffer);
-
-				vk3dRenderer.beginMappingsRenderPass(commandBuffer);
-				mappingsRenderSystem.renderGameObjects(frameInfo);
-				vk3dRenderer.endMappingsRenderPass(commandBuffer);
-
-				vk3dRenderer.beginMappingsRenderPass(commandBuffer);
-				mappingsRenderSystem.renderGameObjects(frameInfo);
-				vk3dRenderer.endMappingsRenderPass(commandBuffer);
+				// render reflection map
+				vk3dRenderer.beginUVReflectionRenderPass(commandBuffer);
+				reflectionRenderSystem.renderUVReflectionMap(frameInfo);
+				vk3dRenderer.endUVReflectionRenderPass(commandBuffer);
 
 				// render swap chain
 				vk3dRenderer.beginSwapChainRenderPass(commandBuffer);
-				VkExtent2D extent = vk3dRenderer.getExtent();
-				simpleRenderSystem.renderGameObjects(frameInfo, glm::inverse(camera.getProjection() * camera.getView()), glm::vec2(1.f/extent.width, 1.f/extent.height));
+				simpleRenderSystem.renderGameObjects(frameInfo, glm::inverse(camera.getProjection() * camera.getView()), invResolution);
 				pointLightSystem.render(frameInfo);
 				vk3dRenderer.endSwapChainRenderPass(commandBuffer);
 				vk3dRenderer.endFrame();
@@ -177,6 +180,7 @@ namespace vk3d {
 		floor.model = gameModels.back();
 		floor.transform.translation = {0.f, 0.f, 0.f };
 		floor.transform.scale = glm::vec3(9.f, 1.f, 9.f);
+		floor.reflection = 1.0f;
 		gameObjects.emplace(floor.getId(), std::move(floor));
 
 		auto right = Vk3dGameObject::createGameObject();

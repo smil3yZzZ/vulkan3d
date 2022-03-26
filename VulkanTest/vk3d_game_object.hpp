@@ -43,6 +43,7 @@ namespace vk3d {
 		std::shared_ptr<Vk3dModel> model{};
 		glm::vec4 color{};
 		TransformComponent transform{};
+		float reflection = 0.0f;
 
 	private:
 		Vk3dGameObject(id_t objId) : id{ objId } {}

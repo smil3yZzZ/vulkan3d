@@ -4,7 +4,6 @@ layout (input_attachment_index = 0, binding = 0) uniform subpassInput samplerNor
 layout (input_attachment_index = 1, binding = 1) uniform subpassInput samplerAlbedo;
 layout (input_attachment_index = 2, binding = 2) uniform subpassInput samplerPositionDepth;
 layout (binding = 4) uniform samplerCube samplerShadowCube;
-layout (binding = 5) uniform sampler2DArray samplerMappingsMap;
 
 layout (location = 0) out vec4 outColor;
 
@@ -23,11 +22,6 @@ layout(push_constant) uniform Push {
 const float specularStrength = 8;
 const float shininess = 32;
 const float EPSILON = 0.15;
-
-float maxDistance = 15;
-float resolution  = 0.3;
-int   steps       = 10;
-float thickness   = 0.5;
 
 /*
 float unidirectionalShadowCalculation(vec3 lightProjCoords)
@@ -59,35 +53,6 @@ void main() {
 	// Read previous pass shadow depth & G-Buffer values from previous sub pass
 	vec2 clipUV = gl_FragCoord.xy * push.invResolution;
 	vec2 clipXY = clipUV * 2.0 - 1.0;
-
-	// Screen-space mappings start
-	/*
-	//Mappings variables
-	vec4 positionFrom = texture(samplerMappingsMap, vec3(clipUV, 0));
-	vec3 unitPositionFrom = normalize(positionFrom.xyz);
-	vec3 reflectionNormal = normalize(texture(samplerMappingsMap, vec3(clipUV, 1)).xyz);
-	vec3 pivot = normalize(reflect(unitPositionFrom, reflectionNormal));
-
-	vec4 startView = vec4(positionFrom.xyz + (pivot * 0), 1.0);
-	vec4 endView = vec4(positionFrom.xyz + (pivot * maxDistance), 1.0);
-
-	vec4 startFrag = startView;
-	// Project to screen space.
-	startFrag = ubo.projection * startFrag;
-	// Perform the perspective divide.
-	startFrag.xyz /= startFrag.w;
-	// Convert the screen-space XY coordinates to UV coordinates.
-	startFrag.xy = startFrag.xy * 0.5 + 0.5;
-	// Convert the UV coordinates to fragment/pixel coordnates.
-	startFrag.xy /= push.invResolution;
-
-	vec4 endFrag = endView;
-    endFrag = ubo.projection * endFrag;
-    endFrag.xyz /= endFrag.w;
-    endFrag.xy = endFrag.xy * 0.5 + 0.5;
-    endFrag.xy /= push.invResolution;
-	*/
-	// Screen-space mappings end
 
 	vec4 clipScene = vec4(clipXY, subpassLoad(samplerPositionDepth).x, 1.0);
 
