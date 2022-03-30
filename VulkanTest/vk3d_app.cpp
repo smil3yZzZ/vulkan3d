@@ -53,7 +53,7 @@ namespace vk3d {
 		Vk3dSwapChain::MappingsUbo mappingsUbo{};
 		Vk3dSwapChain::UVReflectionUbo uvReflectionUbo{};
 
-		viewerObject.transform.translation = Vk3dSwapChain::LIGHT_POSITION;
+		viewerObject.transform.translation = Vk3dSwapChain::CAMERA_POSITION;
 		
 		lightObject.transform.translation = Vk3dSwapChain::LIGHT_POSITION;
 
@@ -136,6 +136,7 @@ namespace vk3d {
 
 				vk3dRenderer.updateCurrentMappingsUbo(&mappingsUbo);
 
+				uvReflectionUbo.viewPos = viewerObject.transform.translation;
 				uvReflectionUbo.projection = camera.getProjection();
 				uvReflectionUbo.view = camera.getView();
 
@@ -173,15 +174,26 @@ namespace vk3d {
 
 	void Vk3dApp::loadGameObjects() {
 
-		
 		std::shared_ptr<Vk3dModel> quadModel = Vk3dModel::createModelFromFile(vk3dDevice, "models/quad.obj", vk3dAllocator);
+
 		gameModels.push_back(std::move(quadModel));
-		auto floor = Vk3dGameObject::createGameObject();
-		floor.model = gameModels.back();
-		floor.transform.translation = {0.f, 0.f, 0.f };
-		floor.transform.scale = glm::vec3(9.f, 1.f, 9.f);
-		floor.reflection = 1.0f;
-		gameObjects.emplace(floor.getId(), std::move(floor));
+		auto floorFar = Vk3dGameObject::createGameObject();
+		floorFar.model = gameModels.back();
+		floorFar.transform.translation = {0.f, 0.f, 6.f };
+		floorFar.transform.scale = glm::vec3(9.f, 1.f, 3.f);
+		gameObjects.emplace(floorFar.getId(), std::move(floorFar));
+
+		auto floorLeft = Vk3dGameObject::createGameObject();
+		floorLeft.model = gameModels.back();
+		floorLeft.transform.translation = { -6.f, 0.f, 0.f };
+		floorLeft.transform.scale = glm::vec3(3.f, 1.f, 6.f);
+		gameObjects.emplace(floorLeft.getId(), std::move(floorLeft));
+
+		auto floorRight = Vk3dGameObject::createGameObject();
+		floorRight.model = gameModels.back();
+		floorRight.transform.translation = { 6.f, 0.f, 0.f };
+		floorRight.transform.scale = glm::vec3(3.f, 1.f, 6.f);
+		gameObjects.emplace(floorRight.getId(), std::move(floorRight));
 
 		auto right = Vk3dGameObject::createGameObject();
 		right.model = gameModels.back();
@@ -217,25 +229,35 @@ namespace vk3d {
 		top.transform.scale = glm::vec3(9.f, 1.f, 9.f);
 		top.transform.rotation = glm::vec3(glm::radians(180.0f), 0.f, 0.f);
 		gameObjects.emplace(top.getId(), std::move(top));
+
+		std::shared_ptr<Vk3dModel> mirrorQuadModel = Vk3dModel::createModelFromFile(vk3dDevice, "models/mirror_quad.obj", vk3dAllocator);
+
+		gameModels.push_back(std::move(mirrorQuadModel));
+		auto floorMirror = Vk3dGameObject::createGameObject();
+		floorMirror.model = gameModels.back();
+		floorMirror.transform.translation = { 0.f, 0.f, 0.f };
+		floorMirror.transform.scale = glm::vec3(3.f, 1.f, 3.f);
+		floorMirror.reflection = 1.0f;
+		gameObjects.emplace(floorMirror.getId(), std::move(floorMirror));
 		
 
 		std::shared_ptr<Vk3dModel> coloredCubeModel = Vk3dModel::createModelFromFile(vk3dDevice, "models/colored_cube.obj", vk3dAllocator);
 		gameModels.push_back(std::move(coloredCubeModel));
 		auto coloredCube = Vk3dGameObject::createGameObject();
 		coloredCube.model = gameModels.back();
-		coloredCube.transform.translation = { 1.f, -1.f, 1.f };
+		coloredCube.transform.translation = { 1.f, -1.f, 0.5f };
 		coloredCube.transform.scale = glm::vec3(0.5f, 1.f, 0.5f);
 		gameObjects.emplace(coloredCube.getId(), std::move(coloredCube));
 
 		auto coloredCube2 = Vk3dGameObject::createGameObject();
 		coloredCube2.model = gameModels.back();
-		coloredCube2.transform.translation = { -.5f, -1.f, 2.f };
+		coloredCube2.transform.translation = { -.5f, -1.f, 1.5f };
 		coloredCube2.transform.scale = glm::vec3(0.5f, 1.f, 0.5f);
 		gameObjects.emplace(coloredCube2.getId(), std::move(coloredCube2));
 
 		auto coloredCube3 = Vk3dGameObject::createGameObject();
 		coloredCube3.model = gameModels.back();
-		coloredCube3.transform.translation = { .5f, -1.f, 3.f };
+		coloredCube3.transform.translation = { .5f, -1.f, 2.5f };
 		coloredCube3.transform.scale = glm::vec3(0.5f, 1.f, 0.5f);
 		gameObjects.emplace(coloredCube3.getId(), std::move(coloredCube3));
 	}

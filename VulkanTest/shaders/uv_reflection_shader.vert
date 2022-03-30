@@ -6,6 +6,7 @@ layout(location = 2) in vec3 normal;
 layout(location = 3) in vec2 uv;
 
 layout(set = 0, binding = 0) uniform UVReflectionBufferUbo {
+	vec3 viewPos;
 	mat4 projection;
 	mat4 view;
 	vec2 invResolution;

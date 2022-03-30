@@ -93,7 +93,7 @@ namespace vk3d {
 	}
 
 	void ReflectionRenderSystem::createUVReflectionMapPipeline(VkRenderPass uvReflectionMapRenderPass) {
-		assert(mappingsPipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
+		assert(uvReflectionMapPipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
 		PipelineConfigInfo pipelineConfig{};
 		pipelineConfig.attachmentCount = 1;
 		pipelineConfig.hasVertexBufferBound = true;
@@ -164,7 +164,7 @@ namespace vk3d {
 
 			push.modelMatrix = obj.transform.mat4();
 			push.reflection = obj.reflection;
-			
+
 			vkCmdPushConstants(
 				frameInfo.commandBuffer,
 				uvReflectionMapPipelineLayout,
@@ -175,8 +175,10 @@ namespace vk3d {
 			);
 
 			obj.model->bind(frameInfo.commandBuffer);
+
 			obj.model->draw(frameInfo.commandBuffer);
 		}
+
 	}
 
 }

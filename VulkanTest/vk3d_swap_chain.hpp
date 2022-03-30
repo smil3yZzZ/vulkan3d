@@ -34,7 +34,8 @@ class Vk3dSwapChain {
      };
 
      struct UVReflectionUbo {
-         glm::mat4 projection{ 1.f };
+         glm::vec3 viewPos;
+         alignas(16) glm::mat4 projection{ 1.f };
          glm::mat4 view{ 1.f };
          glm::vec2 invResolution;
      };
@@ -88,6 +89,8 @@ class Vk3dSwapChain {
   static constexpr VkFormat SHADOW_FB_COLOR_FORMAT = VK_FORMAT_R32_SFLOAT;
 
   static constexpr glm::vec3 LIGHT_POSITION = glm::vec3{ 1.f, -4.f, -4.f };
+
+  static constexpr glm::vec3 CAMERA_POSITION = glm::vec3{ 1.f, -1.f, -4.f };
 
   static constexpr VkFilter DEFAULT_SHADOWMAP_FILTER = VK_FILTER_LINEAR;
 

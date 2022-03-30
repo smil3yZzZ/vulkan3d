@@ -27,11 +27,11 @@ void main() {
 	switch (gl_ViewIndex) {
 		case 0:
 			doNormalize = 0.0;
-			fragMapWorld = ubo.view * positionWorld;
+			fragMapWorld = positionWorld;
 			break;
 		case 1:
 			doNormalize = 1.0;
-			fragMapWorld = ubo.view * vec4(normalize(mat3(push.normalMatrix) * normal), 1.0);
+			fragMapWorld = vec4(normalize(mat3(push.normalMatrix) * normal), 1.0);
 			break;
 	}
 }
