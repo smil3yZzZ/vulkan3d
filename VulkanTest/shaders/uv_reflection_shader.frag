@@ -19,11 +19,11 @@ layout (location = 0) out vec4 outUVReflection;
 //int   steps       = 5;
 //float thickness   = 0.5;
 
-float depthCheckBias = 0.4;
+float depthCheckBias = 0.07;
 float loops = 40.0;
 
 // Length per ray marching iteration
-float marchLength = 0.05;
+float marchLength = 0.1;
 
 struct RayTraceOutput
 {
@@ -48,7 +48,7 @@ void main() {
 	vec3 pivot = normalize(reflect(unitPositionFrom, reflectionNormal));
 
 	// The Current Position in 3D
-	vec4 curPos = vec4(positionFrom.xyz + pivot.xyz, 1.0);
+	vec4 curPos = vec4(positionFrom.xyz, 1.0);
  
 	// The Current UV
 	vec4 curUV = vec4(0.0, 0.0, 0.0, 1.0);
@@ -63,7 +63,7 @@ void main() {
         if (ray.Hit == false)
         {
 			// Update the Current Position of the Ray
-			curPos = vec4(curPos.xyz + pivot.xyz * i * marchLength, 1.0);
+			curPos = vec4(curPos.xyz + pivot.xyz * marchLength, 1.0);
 
 			// Project to screen space.
 			vec4 curFrag = ubo.projection * ubo.view * curPos;
