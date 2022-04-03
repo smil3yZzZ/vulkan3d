@@ -172,7 +172,7 @@
     <ClCompile Include="vk3d_swap_chain.cpp" />
     <ClCompile Include="systems\point_light_system.cpp" />
     <ClCompile Include="systems\shadow_render_system.cpp" />
-    <ClCompile Include="systems\simple_render_system.cpp" />
+    <ClCompile Include="systems\scene_render_system.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="systems\reflection_render_system.hpp" />
@@ -193,7 +193,7 @@
     <ClInclude Include="vk3d_swap_chain.hpp" />
     <ClInclude Include="systems\point_light_system.hpp" />
     <ClInclude Include="systems\shadow_render_system.hpp" />
-    <ClInclude Include="systems\simple_render_system.hpp" />
+    <ClInclude Include="systems\scene_render_system.hpp" />
     <ClInclude Include="vk_mem_alloc.h" />
   </ItemGroup>
   <ItemGroup>
@@ -207,6 +207,8 @@
     <None Include="shaders\point_light.vert" />
     <None Include="shaders\mappings_shader.frag" />
     <None Include="shaders\mappings_shader.vert" />
+    <None Include="shaders\post_processing_shader.frag" />
+    <None Include="shaders\post_processing_shader.vert" />
     <None Include="shaders\shadow_shader.frag" />
     <None Include="shaders\shadow_shader.vert" />
     <None Include="shaders\uv_reflection_shader.frag" />

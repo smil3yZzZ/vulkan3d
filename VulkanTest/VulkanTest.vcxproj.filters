@@ -57,7 +57,7 @@
     <ClCompile Include="vk3d_descriptors.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
-    <ClCompile Include="systems\simple_render_system.cpp">
+    <ClCompile Include="systems\scene_render_system.cpp">
       <Filter>Archivos de recursos</Filter>
     </ClCompile>
     <ClCompile Include="systems\point_light_system.cpp">
@@ -119,7 +119,7 @@
     <ClInclude Include="vk3d_descriptors.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="systems\simple_render_system.hpp">
+    <ClInclude Include="systems\scene_render_system.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="systems\point_light_system.hpp">
@@ -173,6 +173,12 @@
       <Filter>Archivos de recursos</Filter>
     </None>
     <None Include="shaders\uv_reflection_shader.frag">
+      <Filter>Archivos de recursos</Filter>
+    </None>
+    <None Include="shaders\post_processing_shader.frag">
+      <Filter>Archivos de recursos</Filter>
+    </None>
+    <None Include="shaders\post_processing_shader.vert">
       <Filter>Archivos de recursos</Filter>
     </None>
   </ItemGroup>

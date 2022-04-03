@@ -10,6 +10,8 @@ C:\VulkanSDK\1.2.189.2\Bin32\glslc.exe shaders\mappings_shader.vert -o shaders\m
 C:\VulkanSDK\1.2.189.2\Bin32\glslc.exe shaders\mappings_shader.frag -o shaders\mappings_shader.frag.spv
 C:\VulkanSDK\1.2.189.2\Bin32\glslc.exe shaders\uv_reflection_shader.vert -o shaders\uv_reflection_shader.vert.spv
 C:\VulkanSDK\1.2.189.2\Bin32\glslc.exe shaders\uv_reflection_shader.frag -o shaders\uv_reflection_shader.frag.spv
+C:\VulkanSDK\1.2.189.2\Bin32\glslc.exe shaders\post_processing_shader.vert -o shaders\post_processing_shader.vert.spv
+C:\VulkanSDK\1.2.189.2\Bin32\glslc.exe shaders\post_processing_shader.frag -o shaders\post_processing_shader.frag.spv
 Copy shaders\point_light.vert.spv ..\x64\Release\shaders\point_light.vert.spv
 Copy shaders\point_light.frag.spv ..\x64\Release\shaders\point_light.frag.spv
 Copy shaders\composition_shader.vert.spv ..\x64\Release\shaders\composition_shader.vert.spv
@@ -22,4 +24,6 @@ Copy shaders\mappings_shader.vert.spv ..\x64\Release\shaders\mappings_shader.ver
 Copy shaders\mappings_shader.frag.spv ..\x64\Release\shaders\mappings_shader.frag.spv
 Copy shaders\uv_reflection_shader.vert.spv ..\x64\Release\shaders\uv_reflection_shader.vert.spv
 Copy shaders\uv_reflection_shader.frag.spv ..\x64\Release\shaders\uv_reflection_shader.frag.spv
+Copy shaders\post_processing_shader.vert.spv ..\x64\Release\shaders\post_processing_shader.vert.spv
+Copy shaders\post_processing_shader.frag.spv ..\x64\Release\shaders\post_processing_shader.frag.spv
 pause

@@ -3,7 +3,7 @@
 #include "keyboard_movement_controller.hpp"
 #include "vk3d_camera.hpp"
 #include "systems/shadow_render_system.hpp"
-#include "systems/simple_render_system.hpp"
+#include "systems/scene_render_system.hpp"
 #include "systems/reflection_render_system.hpp"
 #include "systems/point_light_system.hpp"
 
@@ -34,8 +34,14 @@ namespace vk3d {
 	void Vk3dApp::run() {
 		ShadowRenderSystem shadowRenderSystem{ vk3dDevice, vk3dRenderer.getShadowRenderPass(), vk3dRenderer.getShadowDescriptorSetLayout() };
 		ReflectionRenderSystem reflectionRenderSystem{ vk3dDevice, vk3dRenderer.getMappingsRenderPass(), vk3dRenderer.getMappingsDescriptorSetLayout(), vk3dRenderer.getUVReflectionRenderPass(), vk3dRenderer.getUVReflectionDescriptorSetLayout() };
-		SimpleRenderSystem simpleRenderSystem{vk3dDevice, vk3dRenderer.getSwapChainRenderPass(), vk3dRenderer.getGBufferDescriptorSetLayout(), vk3dRenderer.getCompositionDescriptorSetLayout() };
-		PointLightSystem pointLightSystem{ vk3dDevice, vk3dRenderer.getSwapChainRenderPass(), vk3dRenderer.getGBufferDescriptorSetLayout(), vk3dRenderer.getCompositionDescriptorSetLayout() };
+		SceneRenderSystem sceneRenderSystem{
+			vk3dDevice, 
+			vk3dRenderer.getLightingRenderPass(), 
+			vk3dRenderer.getGBufferDescriptorSetLayout(), 
+			vk3dRenderer.getCompositionDescriptorSetLayout(),
+			vk3dRenderer.getPostProcessingRenderPass(),
+			vk3dRenderer.getPostProcessingDescriptorSetLayout()};
+		PointLightSystem pointLightSystem{ vk3dDevice, vk3dRenderer.getLightingRenderPass(), vk3dRenderer.getGBufferDescriptorSetLayout(), vk3dRenderer.getCompositionDescriptorSetLayout() };
 		Vk3dCamera camera{};
 		Vk3dCamera light{};
 
@@ -52,6 +58,7 @@ namespace vk3d {
 		Vk3dSwapChain::CompositionUbo compositionUbo{};
 		Vk3dSwapChain::MappingsUbo mappingsUbo{};
 		Vk3dSwapChain::UVReflectionUbo uvReflectionUbo{};
+		Vk3dSwapChain::PostProcessingUbo postProcessingUbo{};
 
 		viewerObject.transform.translation = Vk3dSwapChain::CAMERA_POSITION;
 		
@@ -91,6 +98,7 @@ namespace vk3d {
 		VkExtent2D extent = vk3dRenderer.getExtent();
 		glm::vec2 invResolution = glm::vec2(1.f / extent.width, 1.f / extent.height);
 		uvReflectionUbo.invResolution = invResolution;
+		postProcessingUbo.invResolution = invResolution;
 
 		while (!vk3dWindow.shouldClose()) {
 			glfwPollEvents();
@@ -121,6 +129,7 @@ namespace vk3d {
 					vk3dRenderer.getCurrentUVReflectionDescriptorSet(),
 					vk3dRenderer.getCurrentGBufferDescriptorSet(),
 					vk3dRenderer.getCurrentCompositionDescriptorSet(),
+					vk3dRenderer.getCurrentPostProcessingDescriptorSet(),
 					gameObjects
 				};
 
@@ -146,26 +155,31 @@ namespace vk3d {
 
 				vk3dRenderer.updateCurrentCompositionUbo(&compositionUbo);
 
+				vk3dRenderer.updateCurrentPostProcessingUbo(&postProcessingUbo);
+
 				// render shadows
 				vk3dRenderer.beginShadowRenderPass(commandBuffer);
 				shadowRenderSystem.renderGameObjects(frameInfo);
-				vk3dRenderer.endShadowRenderPass(commandBuffer);
+				vk3dRenderer.endRenderPass(commandBuffer);
 
 				// render mappings
 				vk3dRenderer.beginMappingsRenderPass(commandBuffer);
 				reflectionRenderSystem.renderMappings(frameInfo);
-				vk3dRenderer.endMappingsRenderPass(commandBuffer);
+				vk3dRenderer.endRenderPass(commandBuffer);
 
 				// render reflection map
 				vk3dRenderer.beginUVReflectionRenderPass(commandBuffer);
 				reflectionRenderSystem.renderUVReflectionMap(frameInfo);
-				vk3dRenderer.endUVReflectionRenderPass(commandBuffer);
+				vk3dRenderer.endRenderPass(commandBuffer);
 
 				// render swap chain
-				vk3dRenderer.beginSwapChainRenderPass(commandBuffer);
-				simpleRenderSystem.renderGameObjects(frameInfo, glm::inverse(camera.getProjection() * camera.getView()), invResolution);
+				vk3dRenderer.beginLightingRenderPass(commandBuffer);
+				sceneRenderSystem.renderGameObjectsLighting(frameInfo, glm::inverse(camera.getProjection() * camera.getView()), invResolution);
 				pointLightSystem.render(frameInfo);
-				vk3dRenderer.endSwapChainRenderPass(commandBuffer);
+				vk3dRenderer.endRenderPass(commandBuffer);
+				vk3dRenderer.beginPostProcessingRenderPass(commandBuffer);
+				sceneRenderSystem.renderPostProcessing(frameInfo);
+				vk3dRenderer.endRenderPass(commandBuffer);
 				vk3dRenderer.endFrame();
 			}
 		}

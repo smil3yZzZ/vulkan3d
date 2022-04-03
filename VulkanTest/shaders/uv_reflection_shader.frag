@@ -15,15 +15,11 @@ layout(push_constant) uniform Push {
 
 layout (location = 0) out vec4 outUVReflection;
 
-//float resolution  = 0.05;
-//int   steps       = 5;
-//float thickness   = 0.5;
-
-float depthCheckBias = 0.07;
-float loops = 40.0;
+float depthCheckBias = 0.008;
+float loops = 100.0;
 
 // Length per ray marching iteration
-float marchLength = 0.1;
+float marchLength = 0.016;
 
 struct RayTraceOutput
 {
@@ -57,6 +53,8 @@ void main() {
 
 	float i;
 
+	float maxDistance = length(vec3(curPos.xyz + pivot.xyz * marchLength * loops));
+
 	for (i = 1.0; i < loops; i++)
     {
 		// Has it hit anything yet
@@ -78,6 +76,7 @@ void main() {
 			// The Depth of the Current Pixel
 			float curDepth = texture(samplerMappingsMap, vec3(curUV.xy, 0)).z;
 
+
 			if (abs(curUV.z - curDepth) < depthCheckBias)
             {
                 // If it's hit something, then return the UV position
@@ -86,46 +85,19 @@ void main() {
                 break;
             }
 
-			/*
-			for (int i = 0; i < SAMPLE_COUNT; i++)
-            {
-                if (abs(curUV.z - curDepth) < depthCheckBias)
-                {
-                    // If it's hit something, then return the UV position
-                    ray.Hit = true;
-                    ray.UV = curUV.xy;
-                    break;
-                }
-                curDepth = GetDepth(curUV .xy + (RAND_SAMPLES[i].xy * HalfPixel * 2));
-            }
-			*/
-
 		}
 	}
 
 	float amount = 1.0;
+	//vec2 fadeEdgeUV = abs(curUV.xy - 0.5);
+	//float fadeEdgeWeight = max(fadeEdgeUV.x, fadeEdgeUV.y);
 
 	if (ray.Hit == true) {
-		// Fade at edges
-		//if (ray.UV.y < EdgeCutOff * 2) amount *= (ray.UV.y / EdgeCutOff / 2);
+		// Fade considering distance
+		amount *= 1.0 - length(curPos.xyz)/maxDistance;
+		//amount *= 1.0 - fadeEdgeWeight;
 		uv = vec4(ray.UV.xy, amount, amount);
 	}
 
-	/*
-	//Last checks and set reflection!
-	
-	float visibility = hit1 * positionTo.w 
-	                        * (1 - max(dot(-unitPositionFrom, pivot), 0))
-						    * (1 - clamp(depth / thickness, 0, 1))
-						    * (1 - clamp(length(positionTo - positionFrom)/maxDistance, 0, 1))
-							* (uv.x < 0 || uv.x > 1 ? 0 : 1)
-							* (uv.y < 0 || uv.y > 1 ? 0 : 1);
-
-	visibility = clamp(visibility, 0, 1);
-
-	uv.ba = vec2(visibility);
-	*/
-
-	outUVReflection = curPos;
-	//outUVReflection = vec4(ray.Hit, i, 0, 0);
+	outUVReflection = uv;
 }

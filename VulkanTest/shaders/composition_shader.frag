@@ -23,31 +23,6 @@ const float specularStrength = 8;
 const float shininess = 32;
 const float EPSILON = 0.15;
 
-/*
-float unidirectionalShadowCalculation(vec3 lightProjCoords)
-{
-	// If the fragment is outside the light's projection then it is outside
-	// the light's influence, which means it is in the shadow (notice that
-	// such sample would be outside the shadow map image)
-	
-	if (abs(lightProjCoords.x) > 1.0 ||
-		abs(lightProjCoords.y) > 1.0 ||
-		abs(lightProjCoords.z) > 1.0)
-		return 0.5;
-
-	// transform to [0,1] range
-    lightProjCoords.xy = lightProjCoords.xy * 0.5 + 0.5;
-    // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-    float closestDepth = texture(samplerShadowDepth, lightProjCoords.xy).r; 
-    // get depth of current fragment from light's perspective
-    float currentDepth = lightProjCoords.z;
-    // check whether current frag pos is in shadow
-    float shadow = currentDepth > closestDepth ? 0.5 : 0.0;
-
-    return shadow;
-}
-*/
-
 void main() {
 	
 	// Read previous pass shadow depth & G-Buffer values from previous sub pass
@@ -61,14 +36,10 @@ void main() {
 
 	//Calculate shadow
 	vec3 inDirToLight = fragPosWorld - ubo.lightPosition;
-	float dist    = length(inDirToLight);
+	float dist = length(inDirToLight);
 
 	float depth = texture(samplerShadowCube, vec3(inDirToLight.x, -inDirToLight.y, inDirToLight.z)).r;
 	float shadow = dist < (depth + EPSILON) ? 0.0 : 0.5;
-
-	//vec4 fragPosLight_w = ubo.lightProjView * fragPosWorld_w;
-	//vec3 fragPosLight = fragPosLight_w.xyz / fragPosLight_w.w;
-	//float directionalShadow = unidirectionalShadowCalculation(fragPosLight);
 
 	vec3 normal = subpassLoad(samplerNormal).xyz;
 	vec4 fragColor = subpassLoad(samplerAlbedo);

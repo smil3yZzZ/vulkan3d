@@ -36,8 +36,10 @@ void Vk3dSwapChain::init() {
     createUVMapRenderPass();
     createUVMapFramebuffers();
     createDeferredResources();
-    createCompositionRenderPass();
-    createCompositionFramebuffers();
+    createLightingRenderPass();
+    createLightingFramebuffers();
+    createPostProcessingRenderPass();
+    createPostProcessingFramebuffers();
     createSyncObjects();
     createDescriptorPool();
     createUniformBuffers();
@@ -65,14 +67,18 @@ Vk3dSwapChain::~Vk3dSwapChain() {
   attachmentsVector.clear();
 
   for (auto& samplers : samplersVector) {
+      destroySampler(&samplers.lightingMap);
       destroySampler(&samplers.uvReflectionMap);
       destroySampler(&samplers.mappingsMap);
-      destroySampler(&samplers.shadowOmni);
+      destroySampler(&samplers.shadowOmniMap);
   }
   samplersVector.clear();
   
+  for (auto framebuffer : postProcessingFramebuffers) {
+      vkDestroyFramebuffer(device.device(), framebuffer, nullptr);
+  }
 
-  for (auto framebuffer : swapChainFramebuffers) {
+  for (auto framebuffer : lightingFramebuffers) {
       vkDestroyFramebuffer(device.device(), framebuffer, nullptr);
   }
 
@@ -88,7 +94,8 @@ Vk3dSwapChain::~Vk3dSwapChain() {
       vkDestroyFramebuffer(device.device(), framebuffer, nullptr);
   }
 
-  vkDestroyRenderPass(device.device(), renderPass, nullptr);
+  vkDestroyRenderPass(device.device(), postProcessingRenderPass, nullptr);
+  vkDestroyRenderPass(device.device(), lightingRenderPass, nullptr);
   vkDestroyRenderPass(device.device(), uvReflectionRenderPass, nullptr);
   vkDestroyRenderPass(device.device(), mappingsRenderPass, nullptr);
   vkDestroyRenderPass(device.device(), shadowRenderPass, nullptr);
@@ -258,7 +265,7 @@ void Vk3dSwapChain::createShadowSampler() {
     VkExtent2D shadowMapExtent = getShadowMapExtent();
 
     for (auto& samplers : samplersVector) {
-        createSampler(SHADOW_FB_COLOR_FORMAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &samplers.shadowOmni, shadowMapExtent, VK_IMAGE_VIEW_TYPE_CUBE, NUM_CUBE_FACES);
+        createSampler(SHADOW_FB_COLOR_FORMAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &samplers.shadowOmniMap, shadowMapExtent, VK_IMAGE_VIEW_TYPE_CUBE, NUM_CUBE_FACES);
     }
 
     for (auto& attachments : attachmentsVector) {
@@ -351,7 +358,7 @@ void Vk3dSwapChain::createShadowFramebuffers() {
     shadowFramebuffers.resize(imageCount());
     VkExtent2D shadowMapExtent = getShadowMapExtent();
     for (size_t i = 0; i < imageCount(); i++) {
-        std::array<VkImageView, 2> attachments = { samplersVector[i].shadowOmni.attachment.view, attachmentsVector[i].shadowDepth.view };
+        std::array<VkImageView, 2> attachments = { samplersVector[i].shadowOmniMap.attachment.view, attachmentsVector[i].shadowDepth.view };
 
         VkFramebufferCreateInfo framebufferInfo = {};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -373,10 +380,8 @@ void Vk3dSwapChain::createShadowFramebuffers() {
 }
 
 void Vk3dSwapChain::createMappingsSampler() {
-    deferredResourcesFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
-
     for (auto& samplers : samplersVector) {
-        createSampler(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &samplers.mappingsMap, swapChainExtent, VK_IMAGE_VIEW_TYPE_2D_ARRAY, MAPPINGS_ARRAY_LENGTH);
+        createSampler(DEFERRED_RESOURCES_FORMAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &samplers.mappingsMap, swapChainExtent, VK_IMAGE_VIEW_TYPE_2D_ARRAY, MAPPINGS_ARRAY_LENGTH);
     }
 
     for (auto& attachments : attachmentsVector) {
@@ -388,7 +393,7 @@ void Vk3dSwapChain::createMappingsRenderPass() {
     std::array<VkAttachmentDescription, 2> attachments{};
 
     // View space position % normals attachment
-    attachments[0].format = deferredResourcesFormat;
+    attachments[0].format = DEFERRED_RESOURCES_FORMAT;
     attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
     attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -491,10 +496,8 @@ void Vk3dSwapChain::createMappingsFramebuffers() {
 }
 
 void Vk3dSwapChain::createUVMapSampler() {
-    deferredResourcesFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
-
     for (auto& samplers : samplersVector) {
-        createSampler(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &samplers.uvReflectionMap, swapChainExtent);
+        createSampler(DEFERRED_RESOURCES_FORMAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &samplers.uvReflectionMap, swapChainExtent);
     }
 
     for (auto& attachments : attachmentsVector) {
@@ -506,7 +509,7 @@ void Vk3dSwapChain::createUVMapRenderPass() {
     std::array<VkAttachmentDescription, 2> attachments{};
 
     // View space position & normals attachment
-    attachments[0].format = deferredResourcesFormat;
+    attachments[0].format = DEFERRED_RESOURCES_FORMAT;
     attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
     attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -600,30 +603,35 @@ void Vk3dSwapChain::createUVMapFramebuffers() {
 void Vk3dSwapChain::createDeferredResources() {
     VkExtent2D swapChainExtent = getSwapChainExtent();
 
-    attachmentsVector.resize(imageCount());
+    for (auto& samplers : samplersVector) {
+        createSampler(DEFERRED_RESOURCES_FORMAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, &samplers.lightingMap, swapChainExtent);
+        //Check if depth is necessary
+    }
 
     for (auto& attachments : attachmentsVector) {
-        createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.normal, swapChainExtent);
-        createAttachment(deferredResourcesFormat, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.albedo, swapChainExtent);
+        createAttachment(DEFERRED_RESOURCES_FORMAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.normal, swapChainExtent);
+        createAttachment(DEFERRED_RESOURCES_FORMAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.albedo, swapChainExtent);
         createAttachment(findDepthFormat(), VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT, &attachments.depth, swapChainExtent);
     }
 }
 
-void Vk3dSwapChain::createCompositionRenderPass() {
+void Vk3dSwapChain::createLightingRenderPass() {
   std::array<VkAttachmentDescription, 4> attachments {};
 
   // Color attachment (swap chain)
-  attachments[0].format = getSwapChainImageFormat();
+  //attachments[0].format = getSwapChainImageFormat();
+  attachments[0].format = DEFERRED_RESOURCES_FORMAT;
   attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
   attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
   attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
   attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
   attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
   attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+  //attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+  attachments[0].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
   // Deferred attachments
   // Normals
-  attachments[1].format = deferredResourcesFormat;
+  attachments[1].format = DEFERRED_RESOURCES_FORMAT;
   attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
   attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
   attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -632,7 +640,7 @@ void Vk3dSwapChain::createCompositionRenderPass() {
   attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   attachments[1].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
   // Albedo
-  attachments[2].format = deferredResourcesFormat;
+  attachments[2].format = DEFERRED_RESOURCES_FORMAT;
   attachments[2].samples = VK_SAMPLE_COUNT_1_BIT;
   attachments[2].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
   attachments[2].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -719,20 +727,20 @@ void Vk3dSwapChain::createCompositionRenderPass() {
   renderPassInfo.dependencyCount = dependencies.size();
   renderPassInfo.pDependencies = dependencies.data();
 
-  if (vkCreateRenderPass(device.device(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
+  if (vkCreateRenderPass(device.device(), &renderPassInfo, nullptr, &lightingRenderPass) != VK_SUCCESS) {
     throw std::runtime_error("failed to create render pass!");
   }
 }
 
-void Vk3dSwapChain::createCompositionFramebuffers() {
-  swapChainFramebuffers.resize(imageCount());
+void Vk3dSwapChain::createLightingFramebuffers() {
+  lightingFramebuffers.resize(imageCount());
   for (size_t i = 0; i < imageCount(); i++) {
-    std::array<VkImageView, 4> attachments = { swapChainImageViews[i], this->attachmentsVector[i].normal.view, this->attachmentsVector[i].albedo.view, this->attachmentsVector[i].depth.view };
+    std::array<VkImageView, 4> attachments = { this->samplersVector[i].lightingMap.attachment.view, this->attachmentsVector[i].normal.view, this->attachmentsVector[i].albedo.view, this->attachmentsVector[i].depth.view };
 
     VkExtent2D swapChainExtent = getSwapChainExtent();
     VkFramebufferCreateInfo framebufferInfo = {};
     framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.renderPass = renderPass;
+    framebufferInfo.renderPass = lightingRenderPass;
     framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
     framebufferInfo.pAttachments = attachments.data();
     framebufferInfo.width = swapChainExtent.width;
@@ -743,10 +751,89 @@ void Vk3dSwapChain::createCompositionFramebuffers() {
             device.device(),
             &framebufferInfo,
             nullptr,
-            &swapChainFramebuffers[i]) != VK_SUCCESS) {
+            &lightingFramebuffers[i]) != VK_SUCCESS) {
       throw std::runtime_error("failed to create framebuffer!");
     }
   }
+}
+
+void Vk3dSwapChain::createPostProcessingRenderPass() {
+    std::array<VkAttachmentDescription, 1> attachments{};
+
+    // Color attachment (swap chain)
+    attachments[0].format = getSwapChainImageFormat();
+    attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+   
+    std::array<VkSubpassDescription, 1> subpassDescriptions{};
+
+    VkAttachmentReference colorReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+
+    subpassDescriptions[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpassDescriptions[0].colorAttachmentCount = 1;
+    subpassDescriptions[0].pColorAttachments = &colorReference;
+
+    // Subpass dependencies for layout transitions
+    std::array<VkSubpassDependency, 2> dependencies;
+
+    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass = 0;
+    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependencies[0].srcAccessMask = 0;
+    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    dependencies[1].srcSubpass = 0;
+    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    VkRenderPassCreateInfo renderPassInfo = {};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    renderPassInfo.pAttachments = attachments.data();
+    renderPassInfo.subpassCount = subpassDescriptions.size();
+    renderPassInfo.pSubpasses = subpassDescriptions.data();
+    renderPassInfo.dependencyCount = dependencies.size();
+    renderPassInfo.pDependencies = dependencies.data();
+
+    if (vkCreateRenderPass(device.device(), &renderPassInfo, nullptr, &postProcessingRenderPass) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create render pass!");
+    }
+}
+
+void Vk3dSwapChain::createPostProcessingFramebuffers() {
+    postProcessingFramebuffers.resize(imageCount());
+    for (size_t i = 0; i < imageCount(); i++) {
+        std::array<VkImageView, 1> attachments = { swapChainImageViews[i] };
+
+        VkExtent2D swapChainExtent = getSwapChainExtent();
+        VkFramebufferCreateInfo framebufferInfo = {};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = postProcessingRenderPass;
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebufferInfo.pAttachments = attachments.data();
+        framebufferInfo.width = swapChainExtent.width;
+        framebufferInfo.height = swapChainExtent.height;
+        framebufferInfo.layers = 1;
+
+        if (vkCreateFramebuffer(
+            device.device(),
+            &framebufferInfo,
+            nullptr,
+            &postProcessingFramebuffers[i]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create framebuffer!");
+        }
+    }
 }
 
 void Vk3dSwapChain::createSampler(VkFormat format, VkImageUsageFlags usage, Sampler* sampler, VkExtent2D extent, VkImageViewType imageViewType, uint32_t arrayLayers) {
@@ -932,10 +1019,10 @@ void Vk3dSwapChain::destroySampler(Sampler* sampler) {
 
 void Vk3dSwapChain::createDescriptorPool() {
     globalPool = Vk3dDescriptorPool::Builder(device)
-        .setMaxSets(5 * imageCount())
-        .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 5 * imageCount())
+        .setMaxSets(6 * imageCount())
+        .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 6 * imageCount())
         .addPoolSize(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 3 * imageCount())
-        .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 * imageCount())
+        .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4 * imageCount())
         .build();
 }
 
@@ -945,11 +1032,13 @@ void Vk3dSwapChain::createUniformBuffers() {
     uvReflectionUboBuffers.clear();
     gBufferUboBuffers.clear();
     compositionUboBuffers.clear();
+    postProcessingUboBuffers.clear();
     shadowUboBuffers.resize(imageCount());
     mappingsUboBuffers.resize(imageCount());
     uvReflectionUboBuffers.resize(imageCount());
     gBufferUboBuffers.resize(imageCount());
     compositionUboBuffers.resize(imageCount());
+    postProcessingUboBuffers.resize(imageCount());
 
     for (int i = 0; i < imageCount(); i++) {
         shadowUboBuffers[i] = std::make_unique<Vk3dBuffer>(
@@ -1002,6 +1091,16 @@ void Vk3dSwapChain::createUniformBuffers() {
             allocator
             );
         compositionUboBuffers[i]->map();
+        postProcessingUboBuffers[i] = std::make_unique<Vk3dBuffer>(
+            device,
+            sizeof(PostProcessingUbo),
+            1,
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VMA_MEMORY_USAGE_CPU_TO_GPU,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+            allocator
+            );
+        postProcessingUboBuffers[i]->map();
     }
 
     shadowSetLayout = Vk3dDescriptorSetLayout::Builder(device)
@@ -1075,7 +1174,7 @@ void Vk3dSwapChain::createUniformBuffers() {
         auto albedoInfo = attachmentsVector[i].albedo.descriptorInfo();
         auto depthInfo = attachmentsVector[i].depth.descriptorInfo();
         auto bufferInfo = compositionUboBuffers[i]->descriptorInfo();
-        auto shadowOmni = samplersVector[i].shadowOmni.attachment.descriptorInfo(samplersVector[i].shadowOmni.sampler);
+        auto shadowOmni = samplersVector[i].shadowOmniMap.attachment.descriptorInfo(samplersVector[i].shadowOmniMap.sampler);
         Vk3dDescriptorWriter(*compositionSetLayout, *globalPool)
             .writeImage(0, &normalInfo)
             .writeImage(1, &albedoInfo)
@@ -1083,6 +1182,26 @@ void Vk3dSwapChain::createUniformBuffers() {
             .writeBuffer(3, &bufferInfo)
             .writeImage(4, &shadowOmni)
             .build(compositionDescriptorSets[i]);
+    }
+
+    postProcessingSetLayout = Vk3dDescriptorSetLayout::Builder(device)
+        .addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+        .addBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+        .addBinding(2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
+        .build();
+
+    postProcessingDescriptorSets.clear();
+    postProcessingDescriptorSets.resize(imageCount());
+
+    for (int i = 0; i < postProcessingDescriptorSets.size(); i++) {
+        auto uvReflection = samplersVector[i].uvReflectionMap.attachment.descriptorInfo(samplersVector[i].uvReflectionMap.sampler);
+        auto lightingImage = samplersVector[i].lightingMap.attachment.descriptorInfo(samplersVector[i].lightingMap.sampler);
+        auto bufferInfo = postProcessingUboBuffers[i]->descriptorInfo();
+        Vk3dDescriptorWriter(*postProcessingSetLayout, *globalPool)
+            .writeImage(0, &uvReflection)
+            .writeImage(1, &lightingImage)
+            .writeBuffer(2, &bufferInfo)
+            .build(postProcessingDescriptorSets[i]);
     }
 }
 void Vk3dSwapChain::updateCurrentShadowUbo(void* data, int currentImageIndex) {
@@ -1104,6 +1223,10 @@ void Vk3dSwapChain::updateCurrentGBufferUbo(void* data, int currentImageIndex) {
 void Vk3dSwapChain::updateCurrentCompositionUbo(void* data, int currentImageIndex) {
     compositionUboBuffers[currentImageIndex]->writeToBuffer(data);
     compositionUboBuffers[currentImageIndex]->flush();
+}
+void Vk3dSwapChain::updateCurrentPostProcessingUbo(void* data, int currentImageIndex) {
+    postProcessingUboBuffers[currentImageIndex]->writeToBuffer(data);
+    postProcessingUboBuffers[currentImageIndex]->flush();
 }
 
 // Returns if a given format support LINEAR filtering

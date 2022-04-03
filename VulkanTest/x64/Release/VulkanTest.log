@@ -1,7 +1,32 @@
-﻿  vk3d_app.cpp
+﻿  reflection_render_system.cpp
+  vk3d_app.cpp
+  keyboard_movement_controller.cpp
+  vk3d_game_object.cpp
+  vk3d_model.cpp
+  vk3d_pipeline.cpp
+  vk3d_renderer.cpp
+  main.cpp
+  vk3d_swap_chain.cpp
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(336,61): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(338,57): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(452,61): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(454,57): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(568,61): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(570,57): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(725,59): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(727,55): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(804,61): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(806,57): warning C4267: '=': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(1022,37): warning C4267: 'argumento': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(1023,73): warning C4267: 'argumento': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(1024,75): warning C4267: 'argumento': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+C:\Users\holivera\source\repos\VulkanTest\VulkanTest\vk3d_swap_chain.cpp(1025,81): warning C4267: 'argumento': conversión de 'size_t' a 'uint32_t'; posible pérdida de datos
+  point_light_system.cpp
+  shadow_render_system.cpp
+  scene_render_system.cpp
   Generando código
-  1 of 5115 functions (<0.1%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    9 functions had inline decision re-evaluated but remain unchanged
+  162 of 5137 functions ( 3.2%) were compiled, the rest were copied from previous compilation.
+    41 functions were new in current compilation
+    117 functions had inline decision re-evaluated but remain unchanged
   Generación de código finalizada
   VulkanTest.vcxproj -> C:\Users\holivera\source\repos\VulkanTest\x64\Release\VulkanTest.exe

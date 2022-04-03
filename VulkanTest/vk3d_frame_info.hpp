@@ -17,6 +17,7 @@ namespace vk3d {
 		VkDescriptorSet uvReflectionDescriptorSet;
 		VkDescriptorSet gBufferDescriptorSet;
 		VkDescriptorSet compositionDescriptorSet;
+		VkDescriptorSet postProcessingDescriptorSet;
 		Vk3dGameObject::Map& gameObjects;
 	};
 }
