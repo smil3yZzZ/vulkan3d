@@ -38,7 +38,7 @@ namespace vk3d {
 		void loadGameObjects();
 		void updateModels(int powIteration);
 
-		Vk3dWindow vk3dWindow{WIDTH, HEIGHT, "Hello Vulkan!"};
+		Vk3dWindow vk3dWindow{WIDTH, HEIGHT, "Vulkan3d App"};
 		Vk3dDevice vk3dDevice{ vk3dWindow };
 		Vk3dAllocator vk3dAllocator{ vk3dDevice };
 		Vk3dRenderer vk3dRenderer{ vk3dWindow, vk3dDevice, vk3dAllocator};

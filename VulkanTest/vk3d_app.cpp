@@ -180,6 +180,7 @@ namespace vk3d {
 				vk3dRenderer.beginPostProcessingRenderPass(commandBuffer);
 				sceneRenderSystem.renderPostProcessing(frameInfo);
 				vk3dRenderer.endRenderPass(commandBuffer);
+
 				vk3dRenderer.endFrame();
 			}
 		}
@@ -200,14 +201,20 @@ namespace vk3d {
 		auto floorLeft = Vk3dGameObject::createGameObject();
 		floorLeft.model = gameModels.back();
 		floorLeft.transform.translation = { -6.f, 0.f, 0.f };
-		floorLeft.transform.scale = glm::vec3(3.f, 1.f, 6.f);
+		floorLeft.transform.scale = glm::vec3(3.f, 1.f, 3.f);
 		gameObjects.emplace(floorLeft.getId(), std::move(floorLeft));
 
 		auto floorRight = Vk3dGameObject::createGameObject();
 		floorRight.model = gameModels.back();
 		floorRight.transform.translation = { 6.f, 0.f, 0.f };
-		floorRight.transform.scale = glm::vec3(3.f, 1.f, 6.f);
+		floorRight.transform.scale = glm::vec3(3.f, 1.f, 3.f);
 		gameObjects.emplace(floorRight.getId(), std::move(floorRight));
+
+		auto floorNear = Vk3dGameObject::createGameObject();
+		floorNear.model = gameModels.back();
+		floorNear.transform.translation = { 0.f, 0.f, -6.f };
+		floorNear.transform.scale = glm::vec3(9.f, 1.f, 3.f);
+		gameObjects.emplace(floorNear.getId(), std::move(floorNear));
 
 		auto right = Vk3dGameObject::createGameObject();
 		right.model = gameModels.back();

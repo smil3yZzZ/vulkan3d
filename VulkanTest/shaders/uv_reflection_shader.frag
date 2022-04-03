@@ -21,10 +21,10 @@ float loops = 100.0;
 // Length per ray marching iteration
 float marchLength = 0.016;
 
-struct RayTraceOutput
+struct RayMarch
 {
-	bool Hit;
-	vec2 UV;
+	bool hit;
+	vec2 uv;
 };
 
 void main() {
@@ -39,7 +39,7 @@ void main() {
 
 	//Mappings variables
 	vec4 positionFrom = texture(samplerMappingsMap, vec3(clipUV, 0));
-	vec3 unitPositionFrom = normalize(positionFrom.xyz - ubo.viewPos);
+	vec3 unitPositionFrom = normalize(positionFrom.xyz);
 	vec3 reflectionNormal = normalize(texture(samplerMappingsMap, vec3(clipUV, 1)).xyz);
 	vec3 pivot = normalize(reflect(unitPositionFrom, reflectionNormal));
 
@@ -49,22 +49,22 @@ void main() {
 	// The Current UV
 	vec4 curUV = vec4(0.0, 0.0, 0.0, 1.0);
 	
-	RayTraceOutput ray = {false, vec2(0.0, 0.0)};
+	RayMarch ray = {false, vec2(0.0, 0.0)};
 
 	float i;
 
-	float maxDistance = length(vec3(curPos.xyz + pivot.xyz * marchLength * loops));
+	float maxDistance = length(vec3(curPos.xyz + pivot.xyz * marchLength * loops - curPos.xyz));
 
 	for (i = 1.0; i < loops; i++)
     {
 		// Has it hit anything yet
-        if (ray.Hit == false)
+        if (ray.hit == false)
         {
 			// Update the Current Position of the Ray
 			curPos = vec4(curPos.xyz + pivot.xyz * marchLength, 1.0);
 
 			// Project to screen space.
-			vec4 curFrag = ubo.projection * ubo.view * curPos;
+			vec4 curFrag = ubo.projection * curPos;
 			// Perform the perspective divide.
 			curFrag.xyz /= curFrag.w;
 			// Convert the screen-space XY coordinates to UV coordinates.
@@ -76,12 +76,11 @@ void main() {
 			// The Depth of the Current Pixel
 			float curDepth = texture(samplerMappingsMap, vec3(curUV.xy, 0)).z;
 
-
 			if (abs(curUV.z - curDepth) < depthCheckBias)
             {
                 // If it's hit something, then return the UV position
-                ray.Hit = true;
-                ray.UV = curUV.xy;
+                ray.hit = true;
+                ray.uv = curUV.xy;
                 break;
             }
 
@@ -89,14 +88,12 @@ void main() {
 	}
 
 	float amount = 1.0;
-	//vec2 fadeEdgeUV = abs(curUV.xy - 0.5);
-	//float fadeEdgeWeight = max(fadeEdgeUV.x, fadeEdgeUV.y);
 
-	if (ray.Hit == true) {
-		// Fade considering distance
-		amount *= 1.0 - length(curPos.xyz)/maxDistance;
-		//amount *= 1.0 - fadeEdgeWeight;
-		uv = vec4(ray.UV.xy, amount, amount);
+	if (ray.hit == true) {
+		// Fade considering distance, remove reflections out of texture
+		amount *= 1.0 - length(curPos.xyz - positionFrom.xyz)/maxDistance;
+		amount *= (ray.uv.x < 0 || ray.uv.x > 1 ? 0 : 1) * (ray.uv.y < 0 || ray.uv.y > 1 ? 0 : 1);
+		uv = vec4(ray.uv.xy, amount, amount);
 	}
 
 	outUVReflection = uv;
