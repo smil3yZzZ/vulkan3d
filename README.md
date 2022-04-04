@@ -10,10 +10,11 @@ This is a Vulkan project where some rendering techniques are applied. Some of th
 shadow mapping (both [unidirectional](https://github.com/smil3yZzZ/vulkan3d/commit/21267e9dd409fa12e49b7b0baa968826467e934b) 
 and [omnidirectional](https://github.com/smil3yZzZ/vulkan3d/commit/b3bd7c0c63eadd913ab84f7d533d912ebb53dd19)) 
 and [screen-space reflections](https://github.com/smil3yZzZ/vulkan3d/tree/feature/screen_space_reflections).
-Currently, tile-based lighting is being developed with the use of compute shaders and multiple lights. In addition, future developments 
-include PCF for shadows, FXAA (MSAA has been discarded since deferred rendering is being used) and Screen Space Ambient Occlusion. 
-Some CPU multithreading has been tested while developing omnidirectional shadow mapping. 
-Master branch owns all the features/techniques done until this moment, being this project within an incremental development.
+Currently, [tile-based lighting](https://github.com/smil3yZzZ/vulkan3d/tree/feature/tile_based_lighting) is being developed with the use 
+of compute shaders and multiple lights. In addition, future developments include PCF for shadows, FXAA 
+(MSAA has been discarded since deferred rendering is being used) and Screen Space Ambient Occlusion. Some CPU multithreading has been 
+tested while developing omnidirectional shadow mapping. Master branch owns all the features/techniques done until this moment, 
+being this project within an incremental development.
 
 ## Techniques breakthrough
 
