@@ -9,9 +9,11 @@ This is a Vulkan project where some rendering techniques are applied. Some of th
 [deferred rendering](https://github.com/smil3yZzZ/vulkan3d/commit/54e6383c0692e790883b05d29551cf3bb690e314) (with subpasses),
 shadow mapping (both [unidirectional](https://github.com/smil3yZzZ/vulkan3d/commit/21267e9dd409fa12e49b7b0baa968826467e934b) 
 and [omnidirectional](https://github.com/smil3yZzZ/vulkan3d/commit/b3bd7c0c63eadd913ab84f7d533d912ebb53dd19)) 
-and [screen-space reflections](https://github.com/smil3yZzZ/vulkan3d/tree/feature/screen_space_reflections) (under development). In addition, future developments include PCF for shadows, FXAA,
-and screen space ambient occlusion. Some CPU multithreading has been tested while developing omnidirectional shadow mapping. Master branch owns all the
-features/techniques done until this moment, being this project within an incremental development.
+and [screen-space reflections](https://github.com/smil3yZzZ/vulkan3d/tree/feature/screen_space_reflections).
+Currently, tile-based lighting is being developed with the use of compute shaders and multiple lights. In addition, future developments 
+include PCF for shadows, FXAA (MSAA has been discarded since deferred rendering is being used) and Screen Space Ambient Occlusion. 
+Some CPU multithreading has been tested while developing omnidirectional shadow mapping. 
+Master branch owns all the features/techniques done until this moment, being this project within an incremental development.
 
 ## Techniques breakthrough
 
@@ -51,19 +53,28 @@ per-fragment so the existence of shadows is checked. The result has been previou
 
 ![Omnidirectional shadows design](/shadow_omnidir_structure.png "Omnidirectional shadows design")
 
-### Screen space reflections (under development)
+### Screen space reflections
 
 This process take more render passes than before in order to create several textures that need to be used in the composition. These are the following:
 - Mappings Render Pass: It generates a 2D Array texture in order to get view space positions and normals.
-- UV Render Pass: It generates a 2D texture map with UV positions being reflected per fragment. Here, ray marching is applied by using the previously calculated
+- UV Render Pass: It generates a 2D texture map with UV positions being reflected per fragment, considering a push constant variable
+that represents per-fragment reflection. Here, ray marching is applied by using the previously calculated
 view space positions and normals.
-- Specular Mapping Render Pass: Decides which surfaces are reflectable.
-- Color Reflection Render Pass: Retrieves the color 2D texture from Deferred Render Pass along with the UV positions texture from UV Render Pass and the specular
-map. It applies per-fragment reflections.
+- Post Processing Render Pass: Retrieves the color 2D texture from Deferred Render Pass along with the UV positions texture
+from UV Render Pass. It applies per-fragment reflections.
 
-The technique is under development and the scheme to be implemented is described in the image below.
+![Screen space reflections design](/refl_scene.png "Screen space reflections design")
+![Screen space reflections design](/refl_scene2.png "Screen space reflections design")
+
+The scheme implemented is described in the image below. Future improvements consider blurring and a specular map to represent
+brightness in a more realistic way.
 
 ![Screen space reflections design](/screen_space_refl_design.png "Screen space reflections design")
+
+### Tile-based lighting (under development)
+
+This kind of lighting involves the use of compute shaders in order to paralellize the lighting calculation by dividing the screen into
+tiles (quads of same size). Currently, some tests are being performed with compute shaders in order to think about the correct design.
 
 ## Credits
 
