@@ -67,7 +67,7 @@ from UV Render Pass. It applies per-fragment reflections.
 ![Screen space reflections scene](/refl_scene.png "Screen space reflections scene")
 ![Screen space reflections scene 2](/refl_scene2.png "Screen space reflections scene 2")
 
-The images shown represent the first approach of the screen space reflections. Adding a little bit of gaussian blur in the post processing 
+The images shown represent the first approach of the screen space reflections. By adding a little bit of gaussian blur in the post processing 
 shader along with playing with the visibility factor provided by the UV reflection pass, the result is the following.
 
 ![Screen space reflections scene 3](/screen_space_refl_enhanced.png "Screen space reflections scene 2")
@@ -78,7 +78,7 @@ The scheme implemented is described in the image below.
 
 ### Tile-based lighting (under development)
 
-This kind of lighting involves the use of compute shaders in order to paralellize the lighting calculation by dividing the screen into
+This kind of lighting involves the use of compute shaders in order to parallelize the lighting calculation by dividing the screen into
 tiles (quads of same size). Currently, some tests are being performed with compute shaders in order to think about the correct design.
 
 ## Credits
