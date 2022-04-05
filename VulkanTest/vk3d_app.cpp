@@ -96,11 +96,6 @@ namespace vk3d {
 			shadowUbo.projectionView[faceIndex] = light.getProjection() * light.getView();
 		}
 
-		VkExtent2D extent = vk3dRenderer.getExtent();
-		glm::vec2 invResolution = glm::vec2(1.f / extent.width, 1.f / extent.height);
-		uvReflectionUbo.invResolution = invResolution;
-		postProcessingUbo.invResolution = invResolution;
-
 		while (!vk3dWindow.shouldClose()) {
 			glfwPollEvents();
 
@@ -118,6 +113,11 @@ namespace vk3d {
 			camera.setPerspectiveProjection(glm::radians(50.0f), aspect, CAMERA_NEAR_PLANE, CAMERA_FAR_PLANE);
 
 			if (auto commandBuffer = vk3dRenderer.beginFrame()) {
+				VkExtent2D extent = vk3dRenderer.getExtent();
+				glm::vec2 invResolution = glm::vec2(1.f / extent.width, 1.f / extent.height);
+				uvReflectionUbo.invResolution = invResolution;
+				postProcessingUbo.invResolution = invResolution;
+
 				int frameIndex = vk3dRenderer.getFrameIndex();
 
 				FrameInfo frameInfo{

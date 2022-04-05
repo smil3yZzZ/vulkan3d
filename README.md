@@ -64,11 +64,15 @@ view space positions and normals.
 - Post Processing Render Pass: Retrieves the color 2D texture from Deferred Render Pass along with the UV positions texture
 from UV Render Pass. It applies per-fragment reflections.
 
-![Screen space reflections design](/refl_scene.png "Screen space reflections design")
-![Screen space reflections design](/refl_scene2.png "Screen space reflections design")
+![Screen space reflections scene](/refl_scene.png "Screen space reflections scene")
+![Screen space reflections scene 2](/refl_scene2.png "Screen space reflections scene 2")
 
-The scheme implemented is described in the image below. Future improvements consider blurring and a specular map to represent
-brightness in a more realistic way.
+The images shown represent the first approach of the screen space reflections. Adding a little bit of gaussian blur in the post processing 
+shader along with playing with the visibility factor provided by the UV reflection pass, the result is the following.
+
+![Screen space reflections scene 3](/screen_space_refl_enhanced.png "Screen space reflections scene 2")
+
+The scheme implemented is described in the image below. 
 
 ![Screen space reflections design](/screen_space_refl_design.png "Screen space reflections design")
 

@@ -15,11 +15,11 @@ layout(push_constant) uniform Push {
 
 layout (location = 0) out vec4 outUVReflection;
 
-float depthCheckBias = 0.008;
+float depthCheckBias = 0.02;
 float loops = 100.0;
 
 // Length per ray marching iteration
-float marchLength = 0.016;
+float marchLength = 0.04;
 
 struct RayMarch
 {
