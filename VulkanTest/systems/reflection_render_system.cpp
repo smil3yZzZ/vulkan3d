@@ -34,6 +34,7 @@ namespace vk3d {
 	}
 
 	ReflectionRenderSystem::~ReflectionRenderSystem() {
+		vkDestroyPipelineLayout(vk3dDevice.device(), uvReflectionMapPipelineLayout, nullptr);
 		vkDestroyPipelineLayout(vk3dDevice.device(), mappingsPipelineLayout, nullptr);
 	}
 

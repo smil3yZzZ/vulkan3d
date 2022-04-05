@@ -95,7 +95,7 @@ class Vk3dSwapChain {
 
   static constexpr glm::vec3 LIGHT_POSITION = glm::vec3{ 1.f, -4.f, -4.f };
 
-  static constexpr glm::vec3 CAMERA_POSITION = glm::vec3{ 1.f, -1.f, -4.f };
+  static constexpr glm::vec3 CAMERA_POSITION = glm::vec3{ 1.f, -4.f, -1.f };
 
   static constexpr VkFilter DEFAULT_SHADOWMAP_FILTER = VK_FILTER_LINEAR;
 

@@ -36,6 +36,7 @@ namespace vk3d {
 	}
 
 	SceneRenderSystem::~SceneRenderSystem() {
+		vkDestroyPipelineLayout(vk3dDevice.device(), postProcessingPipelineLayout, nullptr);
 		vkDestroyPipelineLayout(vk3dDevice.device(), compositionPipelineLayout, nullptr);
 		vkDestroyPipelineLayout(vk3dDevice.device(), gBufferPipelineLayout, nullptr);
 	}

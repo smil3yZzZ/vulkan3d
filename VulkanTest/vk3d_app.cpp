@@ -61,6 +61,7 @@ namespace vk3d {
 		Vk3dSwapChain::PostProcessingUbo postProcessingUbo{};
 
 		viewerObject.transform.translation = Vk3dSwapChain::CAMERA_POSITION;
+		viewerObject.transform.rotation.x = glm::radians(-45.0f);
 		
 		lightObject.transform.translation = Vk3dSwapChain::LIGHT_POSITION;
 
